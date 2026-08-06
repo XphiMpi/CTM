@@ -9,62 +9,92 @@ const goStart = () => {
 </script>
 
 <template>
-  <section class="relative min-h-screen overflow-hidden bg-black text-white">
-    <!-- Background -->
+  <section
+    class="relative min-h-screen overflow-hidden bg-[#001B8F] text-white"
+  >
+    <!-- Background Image -->
     <div
-      class="absolute inset-0 bg-cover bg-center scale-105"
+      class="absolute inset-0 bg-cover bg-center"
       style="background-image: url('/hero.png')"
     ></div>
 
-    <!-- Overlay -->
+    <!-- Blue Overlay -->
     <div
-      class="absolute inset-0 bg-linear-to-r from-[#071133]/80 via-black/35 to-black/20"
+      class="absolute inset-0 bg-linear-to-br from-[#0C37D3]/95 via-[#002CB7]/90 to-[#00145C]/95"
     ></div>
 
-    <!-- Blue Glow -->
+    <!-- Glow Effect -->
     <div
-      class="absolute -left-24 top-1/3 h-72 w-72 rounded-full bg-[#0C37D3]/30 blur-3xl sm:h-96 sm:w-96"
+      class="absolute -left-30 top-1/3 h-72 w-72 rounded-full bg-[#0C37D3]/40 blur-3xl"
+    ></div>
+
+    <!-- Decorative Circle -->
+    <div
+      class="absolute bottom-8 -left-10 h-44 w-44 rounded-full bg-white/5"
+    ></div>
+
+    <div
+      class="absolute bottom-16 right-6 h-52 w-52 rounded-full bg-white/5"
     ></div>
 
     <!-- Content -->
     <div class="relative z-10 flex min-h-screen flex-col">
       <!-- Navbar -->
-      <nav class="flex items-center justify-between px-6 py-5 sm:px-10 md:px-16">
-        <div>
-          <h1 class="text-xl font-bold tracking-wide text-[#FFEBB7] sm:text-2xl">
-            CTM
-          </h1>
+      <nav class="px-6 py-6 sm:px-10 md:px-16">
+        <div class="flex items-center gap-3">
 
-          <p class="mt-1 text-[9px] tracking-[0.22em] text-white/55 sm:text-[11px] sm:tracking-[0.28em]">
-            COURSE TEACHER MANAGEMENT
-          </p>
+          <h1
+            class="text-lg font-semibold text-[#DCA122] sm:text-2xl"
+          >
+            Course Teacher Management
+          </h1>
         </div>
       </nav>
 
       <!-- Hero -->
-      <main class="flex flex-1 items-center px-6 py-10 sm:px-10 md:px-16">
-        <div class="w-full max-w-xl">
-          <p class="mb-4 text-[10px] font-semibold tracking-[0.28em] text-[#DCA122] sm:text-xs sm:tracking-[0.35em]">
-            SMART • SIMPLE • RELIABLE
-          </p>
+      <main
+        class="flex flex-1 items-center px-6 py-12 sm:px-10 md:px-16"
+      >
+        <div class="w-full max-w-3xl">
+          <!-- Badge -->
+          <div
+            class="inline-flex rounded-full bg-[#DCA122] px-6 py-3 text-xs font-medium text-black shadow-lg sm:px-8 sm:text-sm"
+          >
+            <span class="block font-semibold text-white">
+              Platform Pembelajaran Terpadu
+            </span>
+          </div>
 
-          <h2 class="max-w-xl text-3xl font-bold leading-tight sm:text-3xl md:text-4xl">
-            Modern Platform For
-            <span class="mt-2 block text-[#FFEBB7]">
-              Course Teacher Management
+          <!-- Heading -->
+          <h2
+            class="mt-8 text-4xl leading-tight sm:text-5xl md:text-6xl"
+          >
+            <span class="block font-light text-white">
+              Belajar Lebih
+            </span>
+
+            <span
+              class="mt-2 block font-semibold text-[#DCA122]"
+            >
+              Cerdas & Menyenangkan
             </span>
           </h2>
 
-          <p class="mt-5 max-w-md text-sm leading-relaxed text-white/70 sm:text-base">
-            Manage attendance, schedules, students, teachers, and reports
-            through one integrated monitoring platform.
+          <!-- Description -->
+          <p
+            class="mt-6 max-w-2xl text-sm leading-relaxed text-white/80 sm:text-base md:text-lg"
+          >
+            Solusi manajemen belajar terpadu untuk siswa SD hingga
+            SMA. Pantau perkembangan, absensi dan nilai secara
+            real-time melalui satu platform yang modern dan mudah
+            digunakan.
           </p>
 
           <!-- Button -->
-          <div class="mt-8 flex w-full sm:w-auto">
+          <div class="mt-8">
             <button
               @click="goStart"
-              class="w-full rounded-full border border-[#DCA122]/40 bg-[#0C37D3]/45 px-8 py-4 text-sm font-semibold tracking-wide text-white shadow-2xl shadow-[#0C37D3]/30 transition duration-300 hover:bg-[#1248ff] active:scale-95 sm:w-72"
+              class="rounded-full bg-[#DCA122] px-6 py-3 text-xs font-semibold text-black shadow-lg transition duration-300 hover:scale-105 hover:bg-[#f3ba33] sm:px-8 sm:py-3 sm:text-sm"
             >
               Get Started
             </button>
@@ -72,37 +102,40 @@ const goStart = () => {
         </div>
       </main>
 
-      <!-- Bottom Info -->
-      <div class="px-6 pb-2 sm:px-10 md:px-16">
+      <!-- Bottom Features -->
+      <div class="px-6 pb-6 sm:px-10 md:px-16">
         <div
-          class="grid max-w-5xl grid-cols-1 gap-5 border-t border-white/10 pt-6 sm:grid-cols-2 lg:grid-cols-3"
+          class="grid max-w-5xl grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
         >
-          <div class="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-            <h3 class="text-sm font-semibold text-[#FFEBB7] sm:text-base">
+          <div
+            class="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md"
+          >
+            <h3 class="text-sm font-semibold text-[#DCA122]">
               Role Based
             </h3>
-
-            <p class="mt-2 text-xs leading-relaxed text-white/55 sm:text-sm">
+            <p class="mt-2 text-xs text-white/70 sm:text-sm">
               Separate access for teacher, student, and parent.
             </p>
           </div>
 
-          <div class="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-            <h3 class="text-sm font-semibold text-[#FFEBB7] sm:text-base">
+          <div
+            class="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md"
+          >
+            <h3 class="text-sm font-semibold text-[#DCA122]">
               Real-Time Monitoring
             </h3>
-
-            <p class="mt-2 text-xs leading-relaxed text-white/55 sm:text-sm">
+            <p class="mt-2 text-xs text-white/70 sm:text-sm">
               Attendance and activity monitored instantly.
             </p>
           </div>
 
-          <div class="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm sm:col-span-2 lg:col-span-1">
-            <h3 class="text-sm font-semibold text-[#FFEBB7] sm:text-base">
+          <div
+            class="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md"
+          >
+            <h3 class="text-sm font-semibold text-[#DCA122]">
               Secure Platform
             </h3>
-
-            <p class="mt-2 text-xs leading-relaxed text-white/55 sm:text-sm">
+            <p class="mt-2 text-xs text-white/70 sm:text-sm">
               Firebase authentication and cloud database support.
             </p>
           </div>
