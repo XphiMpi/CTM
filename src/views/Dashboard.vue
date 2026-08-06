@@ -118,7 +118,13 @@ const selectedRequest = ref(null);
 /* AUTH */
 /* -------------------------------- */
 
-const { currentUser, userProfile, initAuth, loading } = useAuth();
+const {
+  currentUser,
+  userProfile,
+  initAuth,
+  loading,
+  logout: authLogout,
+} = useAuth();
 
 /* -------------------------------- */
 /* USERS */
@@ -276,9 +282,12 @@ const rejectHandler = async (id) => {
   await rejectReschedule(id);
 };
 
-const logout = () => {
+const logout = async () => {
+  await authLogout();
+
   localStorage.clear();
-  location.href = "/login";
+
+  location.href = "/RoleSelect";
 };
 
 /* -------------------------------- */
