@@ -1,5 +1,5 @@
 import { ref } from "vue";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 
 import { auth } from "@/firebase/firebase";
 import { getUserById } from "@/services/userService";
@@ -12,6 +12,8 @@ export function useAuth() {
   const initAuth = () => {
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
+        currentUser.value = null;
+        userProfile.value = null;
         loading.value = false;
         return;
       }
@@ -24,10 +26,15 @@ export function useAuth() {
     });
   };
 
+  const logout = async () => {
+    await signOut(auth);
+  };
+
   return {
     currentUser,
     userProfile,
     loading,
     initAuth,
+    logout,
   };
 }
