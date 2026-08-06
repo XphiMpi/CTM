@@ -316,6 +316,7 @@ onMounted(() => {
           <!-- STUDENT PRESENCE / ATTENDANCE -->
           <template v-if="activeMenu === 'Student presence'">
             <AttendanceManagement
+              :students="students"
               :attendance="attendance"
               @add="openAddAttendance"
               @edit="openEditAttendance"
