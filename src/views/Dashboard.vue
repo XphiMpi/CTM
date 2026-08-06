@@ -5,26 +5,29 @@ import { ref, computed, onMounted } from "vue";
 import Sidebar from "@/components/Sidebar.vue";
 import Topbar from "@/components/Topbar.vue";
 
-/* Dashboard */
+/* Dashboard Views */
 import AdminDashboard from "@/components/AdminDashboard.vue";
 import ParentDashboard from "@/components/ParentDashboard.vue";
 import TeacherDashboard from "@/components/TeacherDashboard.vue";
 
-/* Management & Modals */
+/* Management Components & Modals */
 import StudentManagement from "@/components/StudentManagement.vue";
-import UserManagement from "@/components/UserManagement.vue";
-import AttendanceManagement from "@/components/AttendanceManagement.vue";
-import RescheduleManagement from "@/components/RescheduleManagement.vue";
-
-import AttendanceModal from "@/components/AttendanceModal.vue";
-import UserModal from "@/components/UserModal.vue";
 import StudentModal from "@/components/StudentModal.vue";
+import UserManagement from "@/components/UserManagement.vue";
+import UserModal from "@/components/UserModal.vue";
+import AttendanceManagement from "@/components/AttendanceManagement.vue";
+import AttendanceModal from "@/components/AttendanceModal.vue";
+import RescheduleManagement from "@/components/RescheduleManagement.vue";
 import RescheduleModal from "@/components/RescheduleModal.vue";
+import RescheduleRequest from "@/components/RescheduleRequest.vue";
+import RescheduleRequestModal from "@/components/RescheduleRequestModal.vue";
 
-/* Services */
-import { createStudent, updateStudent } from "../services/studentService";
+/* Services & Firebase */
+import { createStudent, updateStudent } from "@/services/studentService";
 import { createAttendance, updateAttendance } from "@/services/attendanceService";
-import { createUser, updateUser } from "../services/userService";
+import { createUser, updateUser } from "@/services/userService";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { db } from "@/firebase/firebase"; // PATH SESUAI DENGAN EXPLORER ANDA
 
 /* Composables */
 import { useAuth } from "@/composables/useAuth";
@@ -33,14 +36,12 @@ import { useStudents } from "@/composables/useStudents";
 import { useAttendance } from "@/composables/useAttendance";
 import { useReschedule } from "@/composables/useReschedule";
 
-/* -------------------------------- */
-/* AUTH & ROLE */
-/* -------------------------------- */
+/* ---------------------------------------------------- */
+/* AUTH & USER ROLE                                     */
+/* ---------------------------------------------------- */
 const { currentUser, userProfile, initAuth, loading, logout: authLogout } = useAuth();
 
-const role = computed(() => {
-  return userProfile?.value?.role || "teacher";
-});
+const role = computed(() => userProfile?.value?.role || "teacher");
 
 const roleLabel = computed(() => {
   if (role.value === "admin") return "ADMIN";
@@ -48,42 +49,42 @@ const roleLabel = computed(() => {
   return "TEACHER";
 });
 
-/* -------------------------------- */
-/* MENU CONFIGURATION */
-/* -------------------------------- */
-const activeMenu = ref("Dashboard");
-
-const menus = computed(() => {
-  if (role.value === "parent") {
-    return ["Dashboard", "Student presence", "Reschedule"];
-  }
-
-  // Teacher hanya punya Dashboard & Student presence
-  if (role.value === "teacher") {
-    return ["Dashboard", "Student presence"];
-  }
-
-  // Role Admin
-  return [
-    "Dashboard",
-    "Student Management",
-    "User Management",
-    "Student presence",
-    "Reschedule",
-  ];
-});
-
-/* -------------------------------- */
-/* DATA FETCHING & COMPOSABLES */
-/* -------------------------------- */
+/* ---------------------------------------------------- */
+/* COMPOSABLES DATA DATA FETCHING                       */
+/* ---------------------------------------------------- */
 const { users, totalUsers, subscribeUsers, removeUser } = useUsers();
 const { students, totalStudents, subscribeStudents, removeStudent } = useStudents();
 const { attendance, totalAttendance, subscribeAttendance, deleteAttendance } = useAttendance();
 const { reschedules, pendingCount, subscribeReschedule, approveReschedule, rejectReschedule } = useReschedule();
 
-/* -------------------------------- */
-/* STATS */
-/* -------------------------------- */
+/* ---------------------------------------------------- */
+/* NAVIGATION & MENU CONFIGURATION                      */
+/* ---------------------------------------------------- */
+const activeMenu = ref("Dashboard");
+
+const menus = computed(() => {
+  if (role.value === "parent") {
+    return ["Dashboard", "Reschedule Request"];
+  }
+  if (role.value === "teacher") {
+    return ["Dashboard", "Student presence"];
+  }
+  return [
+    "Dashboard",
+    "Student Management",
+    "User Management",
+    "Student presence",
+    "Reschedule Management",
+  ];
+});
+
+const changeMenu = (menu) => {
+  activeMenu.value = menu;
+};
+
+/* ---------------------------------------------------- */
+/* DASHBOARD STATS                                      */
+/* ---------------------------------------------------- */
 const adminStats = computed(() => ({
   students: totalStudents.value,
   users: totalUsers.value,
@@ -91,16 +92,21 @@ const adminStats = computed(() => ({
   pendingReschedule: pendingCount.value,
 }));
 
-// Stats khusus Teacher (Tanpa Reschedule)
 const teacherStats = computed(() => ({
   students: totalStudents.value,
   attendance: totalAttendance.value,
 }));
 
-/* -------------------------------- */
-/* MODAL STATES & HANDLERS */
-/* -------------------------------- */
+const myRequests = computed(() => {
+  if (!userProfile.value?.studentId) return [];
+  return reschedules.value.filter(
+    (item) => item.studentId === userProfile.value.studentId
+  );
+});
 
+/* ---------------------------------------------------- */
+/* MODALS HANDLERS                                      */
+/* ---------------------------------------------------- */
 /* Attendance Modal */
 const showAttendanceModal = ref(false);
 const selectedAttendance = ref(null);
@@ -125,9 +131,9 @@ const saveAttendance = async (data) => {
 };
 
 const deleteAttendanceHandler = async (id) => {
-  const ok = confirm("Hapus data presensi?");
-  if (!ok) return;
-  await deleteAttendance(id);
+  if (confirm("Hapus data presensi ini?")) {
+    await deleteAttendance(id);
+  }
 };
 
 /* Student Modal */
@@ -153,14 +159,14 @@ const saveStudent = async (data) => {
     }
     showStudentModal.value = false;
   } catch (error) {
-    console.error(error);
+    console.error("Gagal menyimpan student:", error);
   }
 };
 
 const deleteStudentHandler = async (id) => {
-  const ok = confirm("Hapus student?");
-  if (!ok) return;
-  await removeStudent(id);
+  if (confirm("Hapus siswa ini?")) {
+    await removeStudent(id);
+  }
 };
 
 /* User Modal */
@@ -187,19 +193,37 @@ const saveUser = async (data) => {
     }
     showUserModal.value = false;
   } catch (error) {
-    console.error(error);
+    console.error("Gagal menyimpan user:", error);
   }
 };
 
 const deleteUserHandler = async (id) => {
-  const ok = confirm("Hapus user?");
-  if (!ok) return;
-  await removeUser(id);
+  if (confirm("Hapus user ini?")) {
+    await removeUser(id);
+  }
 };
 
-/* Reschedule Modal & Handlers */
+/* Reschedule Modal */
 const showRescheduleModal = ref(false);
 const selectedRequest = ref(null);
+const showRequestModal = ref(false);
+
+const openAddRequest = () => {
+  showRequestModal.value = true;
+};
+
+const saveRequest = async (data) => {
+  await addDoc(collection(db, "reschedules"), {
+    studentId: userProfile.value?.studentId || "",
+    studentName: userProfile.value?.studentName || "",
+    tanggal: data.tanggal,
+    jam: data.jam,
+    alasan: data.alasan,
+    status: "Menunggu",
+    createdAt: serverTimestamp(),
+  });
+  showRequestModal.value = false;
+};
 
 const approveHandler = (item) => {
   selectedRequest.value = item;
@@ -220,17 +244,16 @@ const rejectHandler = async (id) => {
   await rejectReschedule(id);
 };
 
-/* Navigation & Auth Handlers */
-const changeMenu = (menu) => {
-  activeMenu.value = menu;
-};
-
+/* Logout */
 const logout = async () => {
   await authLogout();
   localStorage.clear();
   location.href = "/RoleSelect";
 };
 
+/* ---------------------------------------------------- */
+/* LIFECYCLE                                            */
+/* ---------------------------------------------------- */
 onMounted(() => {
   initAuth();
   subscribeUsers();
@@ -251,21 +274,20 @@ onMounted(() => {
       @logout="logout"
     />
 
-    <!-- CONTENT -->
-    <main class="flex-1 flex flex-col">
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col overflow-hidden">
       <Topbar :user="userProfile" :role-label="roleLabel" />
 
       <section class="flex-1 overflow-y-auto p-6">
-        <div v-if="loading" class="text-center">Loading...</div>
+        <div v-if="loading" class="text-center py-10">Loading...</div>
 
         <template v-else>
-          <!-- ADMIN DASHBOARD -->
+          <!-- DASHBOARD VIEWS -->
           <AdminDashboard
             v-if="role === 'admin' && activeMenu === 'Dashboard'"
             :stats="adminStats"
           />
 
-          <!-- TEACHER DASHBOARD -->
           <TeacherDashboard
             v-if="role === 'teacher' && activeMenu === 'Dashboard'"
             :stats="teacherStats"
@@ -274,14 +296,13 @@ onMounted(() => {
             @open-absensi="changeMenu('Student presence')"
           />
 
-          <!-- PARENT DASHBOARD -->
           <ParentDashboard
             v-if="role === 'parent' && activeMenu === 'Dashboard'"
             :attendance="attendance"
             :children="students"
           />
 
-          <!-- STUDENT MANAGEMENT (Admin only) -->
+          <!-- STUDENT MANAGEMENT (Admin Only) -->
           <template v-if="activeMenu === 'Student Management'">
             <StudentManagement
               :students="students"
@@ -297,7 +318,7 @@ onMounted(() => {
             />
           </template>
 
-          <!-- USER MANAGEMENT (Admin only) -->
+          <!-- USER MANAGEMENT (Admin Only) -->
           <template v-if="activeMenu === 'User Management'">
             <UserManagement
               :users="users"
@@ -313,8 +334,8 @@ onMounted(() => {
             />
           </template>
 
-          <!-- STUDENT PRESENCE / ATTENDANCE -->
-          <template v-if="activeMenu === 'Student presence'">
+          <!-- ATTENDANCE / STUDENT PRESENCE -->
+          <template v-if="activeMenu === 'Student presence' || activeMenu === 'Attendance'">
             <AttendanceManagement
               :students="students"
               :attendance="attendance"
@@ -331,8 +352,8 @@ onMounted(() => {
             />
           </template>
 
-          <!-- RESCHEDULE (Admin & Parent only) -->
-          <template v-if="activeMenu === 'Reschedule'">
+          <!-- RESCHEDULE MANAGEMENT (Admin) -->
+          <template v-if="activeMenu === 'Reschedule Management'">
             <RescheduleManagement
               :reschedules="reschedules"
               @approve="approveHandler"
@@ -343,6 +364,19 @@ onMounted(() => {
               :request="selectedRequest"
               @close="showRescheduleModal = false"
               @save="saveApproval"
+            />
+          </template>
+
+          <!-- RESCHEDULE REQUEST (Parent) -->
+          <template v-if="activeMenu === 'Reschedule Request'">
+            <RescheduleRequest
+              :requests="myRequests"
+              @add="openAddRequest"
+            />
+            <RescheduleRequestModal
+              :show="showRequestModal"
+              @close="showRequestModal = false"
+              @save="saveRequest"
             />
           </template>
         </template>

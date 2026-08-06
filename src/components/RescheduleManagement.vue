@@ -10,50 +10,42 @@ defineEmits([
 </script>
 
 <template>
-  <div class="space-y-4">
+  <div>
     <div
-      v-for="item in reschedules"
-      :key="item.id"
-      class="bg-white rounded-xl p-5"
+      v-if="!reschedules?.length"
+      class="bg-white rounded-2xl shadow-sm p-10 text-center"
     >
-      <h3 class="font-bold">
-        {{ item.student }}
+      <div class="text-5xl mb-4">📅</div>
+
+      <h3 class="text-lg font-semibold text-gray-700">
+        Belum Ada Pengajuan Reschedule
       </h3>
 
-      <p>
-        {{ item.alasan }}
+      <p class="text-gray-500 mt-2">
+        Pengajuan reschedule akan muncul di sini setelah dibuat oleh user.
       </p>
+    </div>
 
-      <p
-        class="text-sm text-gray-500"
+    <div
+      v-else
+      class="space-y-4"
+    >
+      <div
+        v-for="item in reschedules"
+        :key="item.id"
+        class="bg-white rounded-xl p-5 shadow-sm"
       >
-        {{ item.status }}
-      </p>
+        <h3 class="font-bold">
+          {{ item.student }}
+        </h3>
 
-      <div class="flex gap-2 mt-3">
-        <button
-          @click="
-            $emit(
-              'approve',
-              item
-            )
-          "
-          class="bg-green-600 text-white px-4 py-2 rounded"
-        >
-          Approve
-        </button>
+        <p>
+          {{ item.alasan }}
+        </p>
 
-        <button
-          @click="
-            $emit(
-              'reject',
-              item.id
-            )
-          "
-          class="bg-red-600 text-white px-4 py-2 rounded"
-        >
-          Reject
-        </button>
+        <p class="text-sm text-gray-500">
+          {{ item.status }}
+        </p>
       </div>
     </div>
   </div>
