@@ -1,145 +1,398 @@
+<script setup>
+import { ref, computed, onMounted } from "vue";
+
+/* Layout */
+import Sidebar from "@/components/Sidebar.vue";
+import Topbar from "@/components/Topbar.vue";
+
+/* Dashboard */
+import AdminDashboard from "@/components/AdminDashboard.vue";
+import ParentDashboard from "@/components/ParentDashboard.vue";
+
+/* Management */
+import StudentManagement from "@/components/StudentManagement.vue";
+import UserManagement from "@/components/UserManagement.vue";
+import AttendanceManagement from "@/components/AttendanceManagement.vue";
+import RescheduleManagement from "@/components/RescheduleManagement.vue";
+import AttendanceModal from "@/components/AttendanceModal.vue";
+import UserModal from "@/components/UserModal.vue";
+import StudentModal from "@/components/StudentModal.vue";
+import RescheduleModal from "@/components/RescheduleModal.vue";
+import { createStudent, updateStudent } from "../services/studentService";
+import {
+  createAttendance,
+  updateAttendance,
+} from "@/services/attendanceService";
+import { createUser, updateUser } from "../services/userService";
+
+/* Composables */
+import { useAuth } from "@/composables/useAuth";
+import { useUsers } from "@/composables/useUsers";
+import { useStudents } from "@/composables/useStudents";
+import { useAttendance } from "@/composables/useAttendance";
+import { useReschedule } from "@/composables/useReschedule";
+/* state*/
+const showAttendanceModal = ref(false);
+
+const selectedAttendance = ref(null);
+
+const openAddAttendance = () => {
+  selectedAttendance.value = null;
+
+  showAttendanceModal.value = true;
+};
+
+const openEditAttendance = (item) => {
+  selectedAttendance.value = item;
+  showAttendanceModal.value = true;
+};
+
+const saveAttendance = async (data) => {
+  if (data.id) {
+    await updateAttendance(data.id, data);
+  } else {
+    await createAttendance(data);
+  }
+
+  showAttendanceModal.value = false;
+};
+
+const showStudentModal = ref(false);
+const selectedStudent = ref(null);
+
+const openAddStudent = () => {
+  selectedStudent.value = null;
+  showStudentModal.value = true;
+};
+
+const openEditStudent = (student) => {
+  selectedStudent.value = student;
+  showStudentModal.value = true;
+};
+
+const saveStudent = async (data) => {
+  try {
+    if (data.id) {
+      await updateStudent(data.id, data);
+    } else {
+      await createStudent(data);
+    }
+
+    showStudentModal.value = false;
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+const showUserModal = ref(false);
+const selectedUser = ref(null);
+const openAddUser = () => {
+  selectedUser.value = null;
+  showUserModal.value = true;
+};
+
+const openEditUser = (user) => {
+  selectedUser.value = user;
+  showUserModal.value = true;
+};
+
+const saveUser = async (data) => {
+  try {
+    if (data.id) {
+      await updateUser(data.id, data);
+    } else {
+      const id = crypto.randomUUID();
+
+      await createUser(id, data);
+    }
+
+    showUserModal.value = false;
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+const showRescheduleModal = ref(false);
+const selectedRequest = ref(null);
+/* -------------------------------- */
+/* AUTH */
+/* -------------------------------- */
+
+const { currentUser, userProfile, initAuth, loading } = useAuth();
+
+/* -------------------------------- */
+/* USERS */
+/* -------------------------------- */
+
+const { users, totalUsers, subscribeUsers, removeUser } = useUsers();
+
+/* -------------------------------- */
+/* STUDENTS */
+/* -------------------------------- */
+
+const {
+  students,
+  totalStudents,
+  subscribeStudents,
+  removeStudent,
+} = useStudents();
+
+/* -------------------------------- */
+/* ATTENDANCE */
+/* -------------------------------- */
+
+const { attendance, totalAttendance, subscribeAttendance, deleteAttendance } =
+  useAttendance();
+
+/* -------------------------------- */
+/* RESCHEDULE */
+/* -------------------------------- */
+
+const {
+  reschedules,
+  pendingCount,
+  subscribeReschedule,
+  approveReschedule,
+  rejectReschedule,
+} = useReschedule();
+
+/* -------------------------------- */
+/* UI STATE */
+/* -------------------------------- */
+
+const activeMenu = ref("Dashboard");
+
+/* -------------------------------- */
+/* ROLE */
+/* -------------------------------- */
+
+const role = computed(() => {
+  return userProfile?.value?.role || "teacher";
+});
+
+const roleLabel = computed(() => {
+  if (role.value === "admin") {
+    return "ADMIN";
+  }
+
+  if (role.value === "parent") {
+    return "ORANG TUA";
+  }
+
+  return "TEACHER";
+});
+
+/* -------------------------------- */
+/* MENU */
+/* -------------------------------- */
+
+const menus = computed(() => {
+  if (role.value === "parent") {
+    return ["Dashboard", "Attendance", "Reschedule"];
+  }
+
+  return [
+    "Dashboard",
+    "Student Management",
+    "User Management",
+    "Attendance",
+    "Reschedule",
+  ];
+});
+
+/* -------------------------------- */
+/* STATS */
+/* -------------------------------- */
+
+const adminStats = computed(() => ({
+  students: totalStudents.value,
+  users: totalUsers.value,
+  attendance: totalAttendance.value,
+  pendingReschedule: pendingCount.value,
+}));
+
+/* -------------------------------- */
+/* EVENTS */
+/* -------------------------------- */
+
+const changeMenu = (menu) => {
+  activeMenu.value = menu;
+};
+
+const deleteStudentHandler = async (id) => {
+  const ok = confirm("Hapus student?");
+
+  if (!ok) return;
+
+  await removeStudent(id);
+};
+
+const deleteUserHandler = async (id) => {
+  const ok = confirm("Hapus user?");
+
+  if (!ok) return;
+
+  await removeUser(id);
+};
+
+const deleteAttendanceHandler = async (id) => {
+  const ok = confirm("Hapus attendance?");
+
+  if (!ok) return;
+
+  await deleteAttendance(id);
+};
+
+const approveHandler = (item) => {
+  selectedRequest.value = item;
+  showRescheduleModal.value = true;
+};
+
+const saveApproval = async (
+  payload
+) => {
+  await approveReschedule(
+    payload.requestId,
+    {
+      tanggal:
+        payload.tanggalPengganti,
+
+      jam:
+        payload.jamPengganti,
+
+      kelas:
+        payload.kelasPengganti,
+
+      catatan:
+        payload.catatan,
+    }
+  );
+
+  showRescheduleModal.value =
+    false;
+};
+
+const rejectHandler = async (id) => {
+  await rejectReschedule(id);
+};
+
+const logout = () => {
+  localStorage.clear();
+  location.href = "/login";
+};
+
+/* -------------------------------- */
+/* INIT */
+/* -------------------------------- */
+
+onMounted(() => {
+  initAuth();
+
+  subscribeUsers();
+  subscribeStudents();
+  subscribeAttendance();
+  subscribeReschedule();
+});
+</script>
+
 <template>
-  <div class="flex h-screen bg-white">
-    <!-- Sidebar -->
-    <aside class="w-64 bg-[#108EDC] text-white flex flex-col">
-      <!-- Profile -->
-      <div class="p-6 flex items-center gap-4 border-b border-white/30">
-        <div
-          class="w-14 h-14 rounded-full border-4 border-[#DCA122] bg-white"
-        ></div>
+  <div class="flex h-screen bg-[#f1f2fb]">
+    <!-- SIDEBAR -->
 
-        <div>
-          <p class="font-semibold">{{ nama }}</p>
-          <p class="text-sm opacity-80">{{ ctmId }}</p>
-        </div>
-      </div>
+    <Sidebar
+      :menus="menus"
+      :activeMenu="activeMenu"
+      :role-label="roleLabel"
+      @change-menu="changeMenu"
+      @logout="logout"
+    />
 
-      <!-- Menu -->
-      <nav class="flex-1 p-4 space-y-3">
-        <div
-          v-for="item in menus"
-          :key="item"
-          class="group cursor-pointer"
-        >
-          <div
-            class="px-4 py-3 rounded-lg bg-white/10 hover:bg-white/20 transition relative overflow-hidden"
-          >
-            <span class="relative z-10">{{ item }}</span>
+    <!-- CONTENT -->
 
-            <!-- Gold Accent -->
-            <span
-              class="absolute left-0 top-0 h-full w-1 bg-[#DCA122] opacity-0 group-hover:opacity-100 transition"
-            ></span>
-          </div>
-        </div>
-      </nav>
+    <main class="flex-1 flex flex-col">
+      <Topbar :user="userProfile" :role-label="roleLabel" />
 
-      <!-- Footer -->
-      <div class="p-4 border-t border-white/30 text-sm opacity-70">
-        Emier Teacher Management
-      </div>
-    </aside>
+      <section class="flex-1 overflow-y-auto p-6">
+        <div v-if="loading" class="text-center">Loading...</div>
 
-    <!-- Main Content -->
-    <main class="flex-1 bg-[#FFEBB7]/30 p-10 overflow-auto">
-      <!-- Topbar -->
-      <div class="flex justify-between items-center mb-8">
-        <h1 class="text-3xl font-bold text-[#0C37D3]">
-          Dashboard
-        </h1>
+        <!-- ADMIN DASHBOARD -->
 
-        <button
-          @click="logout"
-          class="px-4 py-2 bg-[#0C37D3] text-white rounded-lg hover:scale-105 transition"
-        >
-          Logout
-        </button>
-      </div>
+        <AdminDashboard
+          v-if="role === 'admin' && activeMenu === 'Dashboard'"
+          :stats="adminStats"
+        />
 
-      <!-- Cards -->
-      <div
-        v-motion
-        initial="{ opacity: 0, y: 40 }"
-        enter="{ opacity: 1, y: 0 }"
-        class="grid grid-cols-3 gap-6"
-      >
-        <div
-          v-for="card in cards"
-          :key="card.title"
-          class="bg-white rounded-xl shadow-lg p-6 border-t-4 border-[#DCA122]"
-        >
-          <h2 class="text-xl font-semibold text-[#0C37D3] mb-2">
-            {{ card.title }}
-          </h2>
+        <!-- PARENT DASHBOARD -->
 
-          <p class="text-gray-600">
-            {{ card.desc }}
-          </p>
-        </div>
-      </div>
+        <ParentDashboard
+          v-if="role === 'parent' && activeMenu === 'Dashboard'"
+          :attendance="attendance"
+          :children="students"
+        />
+
+        <!-- STUDENT -->
+
+        <StudentManagement
+          v-if="activeMenu === 'Student Management'"
+          :students="students"
+          @add="openAddStudent"
+          @edit="openEditStudent"
+          @delete="deleteStudentHandler"
+        />
+
+        <StudentModal
+          :show="showStudentModal"
+          :student="selectedStudent"
+          @close="showStudentModal = false"
+          @save="saveStudent"
+        />
+
+        <!-- USER -->
+
+        <UserManagement
+          v-if="activeMenu === 'User Management'"
+          :users="users"
+          @add="openAddUser"
+          @edit="openEditUser"
+          @delete="deleteUserHandler"
+        />
+
+        <UserModal
+          :show="showUserModal"
+          :user="selectedUser"
+          @close="showUserModal = false"
+          @save="saveUser"
+        />
+
+        <!-- ATTENDANCE -->
+
+        <!-- ATTENDANCE -->
+
+        <AttendanceManagement
+          v-if="activeMenu === 'Attendance'"
+          :attendance="attendance"
+          @add="openAddAttendance"
+          @edit="openEditAttendance"
+          @delete="deleteAttendanceHandler"
+        />
+
+        <AttendanceModal
+          :show="showAttendanceModal"
+          :attendance="selectedAttendance"
+          :students="students"
+          @close="showAttendanceModal = false"
+          @save="saveAttendance"
+        />
+
+        <!-- RESCHEDULE -->
+
+        <RescheduleManagement
+          v-if="activeMenu === 'Reschedule'"
+          :reschedules="reschedules"
+          @approve="approveHandler"
+          @reject="rejectHandler"
+        />
+      </section>
     </main>
   </div>
 </template>
-
-<script setup>
-import { ref, onMounted } from "vue";
-import { auth, db } from "../firebase/firebase";
-import { doc, getDoc } from "firebase/firestore";
-import { signOut } from "firebase/auth";
-import { useRouter } from "vue-router";
-
-const router = useRouter();
-
-const nama = ref("Loading...");
-const ctmId = ref("Loading...");
-
-onMounted(async () => {
-  try {
-    const user = auth.currentUser;
-
-    if (!user) {
-      router.push("/");
-      return;
-    }
-
-    const snap = await getDoc(doc(db, "users", user.uid));
-
-    if (snap.exists()) {
-      const data = snap.data();
-
-      nama.value = data.nama;
-      ctmId.value = data.ctmId;
-    }
-  } catch (e) {
-    console.log(e);
-  }
-});
-
-const logout = async () => {
-  await signOut(auth);
-  router.push("/RoleSelect");
-};
-
-const menus = ref([
-  "Overview",
-  "Attendance",
-  "Students",
-  "Classes",
-  "Reports",
-]);
-
-const cards = ref([
-  {
-    title: "Total Students",
-    desc: "Monitor all registered students in your classes.",
-  },
-  {
-    title: "Attendance Today",
-    desc: "Track today's teaching attendance status.",
-  },
-  {
-    title: "Active Classes",
-    desc: "Manage and monitor active courses easily.",
-  },
-]);
-</script>
