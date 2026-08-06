@@ -20,12 +20,21 @@ import AttendanceModal from "@/components/AttendanceModal.vue";
 import UserModal from "@/components/UserModal.vue";
 import StudentModal from "@/components/StudentModal.vue";
 import RescheduleModal from "@/components/RescheduleModal.vue";
+<<<<<<< HEAD
 
 /* Services */
+=======
+import RescheduleRequest from "@/components/RescheduleRequest.vue";
+import RescheduleRequestModal from "@/components/RescheduleRequestModal.vue";
+>>>>>>> da30beb (Update project)
 import { createStudent, updateStudent } from "../services/studentService";
 import { createAttendance, updateAttendance } from "@/services/attendanceService";
 import { createUser, updateUser } from "../services/userService";
-
+import {
+  addDoc,
+  collection,
+  serverTimestamp,
+} from "firebase/firestore";
 /* Composables */
 import { useAuth } from "@/composables/useAuth";
 import { useUsers } from "@/composables/useUsers";
@@ -191,6 +200,165 @@ const saveUser = async (data) => {
   }
 };
 
+<<<<<<< HEAD
+=======
+const showRescheduleModal = ref(false);
+const selectedRequest = ref(null);
+
+const showRequestModal = ref(false);
+const openAddRequest = () => {
+  showRequestModal.value = true;
+};
+const saveRequest = async (data) => {
+  await addDoc(
+    collection(db, "reschedules"),
+    {
+      studentId:
+        userProfile.value.studentId,
+
+      studentName:
+        userProfile.value.studentName,
+
+      tanggal: data.tanggal,
+      jam: data.jam,
+      alasan: data.alasan,
+
+      status: "Menunggu",
+
+      createdAt: serverTimestamp(),
+    }
+  );
+
+  showRequestModal.value = false;
+};
+
+
+/* -------------------------------- */
+/* AUTH */
+/* -------------------------------- */
+
+const {
+  currentUser,
+  userProfile,
+  initAuth,
+  loading,
+  logout: authLogout,
+} = useAuth();
+
+/* -------------------------------- */
+/* USERS */
+/* -------------------------------- */
+
+const { users, totalUsers, subscribeUsers, removeUser } = useUsers();
+
+/* -------------------------------- */
+/* STUDENTS */
+/* -------------------------------- */
+
+const { students, totalStudents, subscribeStudents, removeStudent } =
+  useStudents();
+
+/* -------------------------------- */
+/* ATTENDANCE */
+/* -------------------------------- */
+
+const { attendance, totalAttendance, subscribeAttendance, deleteAttendance } =
+  useAttendance();
+
+/* -------------------------------- */
+/* RESCHEDULE */
+/* -------------------------------- */
+
+const {
+  reschedules,
+  pendingCount,
+  subscribeReschedule,
+  approveReschedule,
+  rejectReschedule,
+} = useReschedule();
+
+/* -------------------------------- */
+/* UI STATE */
+/* -------------------------------- */
+
+const activeMenu = ref("Dashboard");
+
+/* -------------------------------- */
+/* ROLE */
+/* -------------------------------- */
+
+const role = computed(() => {
+  return userProfile?.value?.role || "teacher";
+});
+
+const roleLabel = computed(() => {
+  if (role.value === "admin") {
+    return "ADMIN";
+  }
+
+  if (role.value === "parent") {
+    return "ORANG TUA";
+  }
+
+  return "TEACHER";
+});
+
+/* -------------------------------- */
+/* MENU */
+/* -------------------------------- */
+
+const menus = computed(() => {
+  if (role.value === "parent") {
+    return ["Dashboard", "Reschedule Request"];
+  }
+
+  return [
+    "Dashboard",
+    "Student Management",
+    "User Management",
+    "Attendance",
+    "Reschedule Management",
+  ];
+});
+
+const myRequests = computed(() => {
+  if (!userProfile.value?.studentId) {
+    return [];
+  }
+
+  return reschedules.value.filter(
+    item =>
+      item.studentId === userProfile.value.studentId
+  );
+});
+/* -------------------------------- */
+/* STATS */
+/* -------------------------------- */
+
+const adminStats = computed(() => ({
+  students: totalStudents.value,
+  users: totalUsers.value,
+  attendance: totalAttendance.value,
+  pendingReschedule: pendingCount.value,
+}));
+
+/* -------------------------------- */
+/* EVENTS */
+/* -------------------------------- */
+
+const changeMenu = (menu) => {
+  activeMenu.value = menu;
+};
+
+const deleteStudentHandler = async (id) => {
+  const ok = confirm("Hapus student?");
+
+  if (!ok) return;
+
+  await removeStudent(id);
+};
+
+>>>>>>> da30beb (Update project)
 const deleteUserHandler = async (id) => {
   const ok = confirm("Hapus user?");
   if (!ok) return;
@@ -209,10 +377,21 @@ const approveHandler = (item) => {
 const saveApproval = async (payload) => {
   await approveReschedule(payload.requestId, {
     tanggal: payload.tanggalPengganti,
+<<<<<<< HEAD
     jam: payload.jamPengganti,
     kelas: payload.kelasPengganti,
     catatan: payload.catatan,
   });
+=======
+
+    jam: payload.jamPengganti,
+
+    kelas: payload.kelasPengganti,
+
+    catatan: payload.catatan,
+  });
+
+>>>>>>> da30beb (Update project)
   showRescheduleModal.value = false;
 };
 
@@ -330,6 +509,7 @@ onMounted(() => {
             />
           </template>
 
+<<<<<<< HEAD
           <!-- RESCHEDULE (Admin & Parent only) -->
           <template v-if="activeMenu === 'Reschedule'">
             <RescheduleManagement
@@ -345,6 +525,70 @@ onMounted(() => {
             />
           </template>
         </template>
+=======
+        <StudentModal
+          :show="showStudentModal"
+          :student="selectedStudent"
+          @close="showStudentModal = false"
+          @save="saveStudent"
+        />
+
+        <!-- USER -->
+
+        <UserManagement
+          v-if="activeMenu === 'User Management'"
+          :users="users"
+          @add="openAddUser"
+          @edit="openEditUser"
+          @delete="deleteUserHandler"
+        />
+
+        <UserModal
+          :show="showUserModal"
+          :user="selectedUser"
+          @close="showUserModal = false"
+          @save="saveUser"
+        />
+
+        <!-- ATTENDANCE -->
+
+        <!-- ATTENDANCE -->
+
+        <AttendanceManagement
+          v-if="activeMenu === 'Attendance'"
+          :attendance="attendance"
+          @add="openAddAttendance"
+          @edit="openEditAttendance"
+          @delete="deleteAttendanceHandler"
+        />
+
+        <AttendanceModal
+          :show="showAttendanceModal"
+          :attendance="selectedAttendance"
+          :students="students"
+          @close="showAttendanceModal = false"
+          @save="saveAttendance"
+        />
+
+        <!-- RESCHEDULE -->
+
+        <RescheduleManagement
+          v-if="role === 'admin' && activeMenu === 'Reschedule Management'"
+          :reschedules="reschedules"
+          @approve="approveHandler"
+          @reject="rejectHandler"
+        />
+        <RescheduleRequest
+          v-if="role === 'parent' && activeMenu === 'Reschedule Request'"
+          :requests="myRequests"
+          @add="openAddRequest"
+        />
+        <RescheduleRequestModal
+          :show="showRequestModal"
+          @close="showRequestModal = false"
+          @save="saveRequest"
+        />
+>>>>>>> da30beb (Update project)
       </section>
     </main>
   </div>
