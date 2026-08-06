@@ -36,7 +36,7 @@ import { useReschedule } from "@/composables/useReschedule";
 /* -------------------------------- */
 /* AUTH & ROLE */
 /* -------------------------------- */
-const { currentUser, userProfile, initAuth, loading } = useAuth();
+const { currentUser, userProfile, initAuth, loading, logout: authLogout } = useAuth();
 
 const role = computed(() => {
   return userProfile?.value?.role || "teacher";
@@ -100,6 +100,8 @@ const teacherStats = computed(() => ({
 /* -------------------------------- */
 /* MODAL STATES & HANDLERS */
 /* -------------------------------- */
+
+/* Attendance Modal */
 const showAttendanceModal = ref(false);
 const selectedAttendance = ref(null);
 
@@ -189,130 +191,6 @@ const saveUser = async (data) => {
   }
 };
 
-<<<<<<< HEAD
-=======
-const showRescheduleModal = ref(false);
-const selectedRequest = ref(null);
-/* -------------------------------- */
-/* AUTH */
-/* -------------------------------- */
-
-const {
-  currentUser,
-  userProfile,
-  initAuth,
-  loading,
-  logout: authLogout,
-} = useAuth();
-
-/* -------------------------------- */
-/* USERS */
-/* -------------------------------- */
-
-const { users, totalUsers, subscribeUsers, removeUser } = useUsers();
-
-/* -------------------------------- */
-/* STUDENTS */
-/* -------------------------------- */
-
-const {
-  students,
-  totalStudents,
-  subscribeStudents,
-  removeStudent,
-} = useStudents();
-
-/* -------------------------------- */
-/* ATTENDANCE */
-/* -------------------------------- */
-
-const { attendance, totalAttendance, subscribeAttendance, deleteAttendance } =
-  useAttendance();
-
-/* -------------------------------- */
-/* RESCHEDULE */
-/* -------------------------------- */
-
-const {
-  reschedules,
-  pendingCount,
-  subscribeReschedule,
-  approveReschedule,
-  rejectReschedule,
-} = useReschedule();
-
-/* -------------------------------- */
-/* UI STATE */
-/* -------------------------------- */
-
-const activeMenu = ref("Dashboard");
-
-/* -------------------------------- */
-/* ROLE */
-/* -------------------------------- */
-
-const role = computed(() => {
-  return userProfile?.value?.role || "teacher";
-});
-
-const roleLabel = computed(() => {
-  if (role.value === "admin") {
-    return "ADMIN";
-  }
-
-  if (role.value === "parent") {
-    return "ORANG TUA";
-  }
-
-  return "TEACHER";
-});
-
-/* -------------------------------- */
-/* MENU */
-/* -------------------------------- */
-
-const menus = computed(() => {
-  if (role.value === "parent") {
-    return ["Dashboard", "Attendance", "Reschedule"];
-  }
-
-  return [
-    "Dashboard",
-    "Student Management",
-    "User Management",
-    "Attendance",
-    "Reschedule",
-  ];
-});
-
-/* -------------------------------- */
-/* STATS */
-/* -------------------------------- */
-
-const adminStats = computed(() => ({
-  students: totalStudents.value,
-  users: totalUsers.value,
-  attendance: totalAttendance.value,
-  pendingReschedule: pendingCount.value,
-}));
-
-/* -------------------------------- */
-/* EVENTS */
-/* -------------------------------- */
-
-const changeMenu = (menu) => {
-  activeMenu.value = menu;
-};
-
-const deleteStudentHandler = async (id) => {
-  const ok = confirm("Hapus student?");
-
-  if (!ok) return;
-
-  await removeStudent(id);
-};
-
->>>>>>> 6c10100f776b085bfbae3605e697ae517fbc8990
 const deleteUserHandler = async (id) => {
   const ok = confirm("Hapus user?");
   if (!ok) return;
@@ -342,20 +220,14 @@ const rejectHandler = async (id) => {
   await rejectReschedule(id);
 };
 
-<<<<<<< HEAD
-/* General Handlers */
+/* Navigation & Auth Handlers */
 const changeMenu = (menu) => {
   activeMenu.value = menu;
 };
 
-const logout = () => {
-=======
 const logout = async () => {
   await authLogout();
-
->>>>>>> 6c10100f776b085bfbae3605e697ae517fbc8990
   localStorage.clear();
-
   location.href = "/RoleSelect";
 };
 
@@ -394,7 +266,6 @@ onMounted(() => {
           />
 
           <!-- TEACHER DASHBOARD -->
-         <!-- TEACHER DASHBOARD -->
           <TeacherDashboard
             v-if="role === 'teacher' && activeMenu === 'Dashboard'"
             :stats="teacherStats"
