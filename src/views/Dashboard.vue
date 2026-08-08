@@ -16,15 +16,20 @@ import StudentModal from "@/components/StudentModal.vue";
 import UserManagement from "@/components/UserManagement.vue";
 import UserModal from "@/components/UserModal.vue";
 import AttendanceManagement from "@/components/AttendanceManagement.vue";
-import AttendanceModal from "@/components/AttendanceModal.vue";
 import RescheduleManagement from "@/components/RescheduleManagement.vue";
 import RescheduleModal from "@/components/RescheduleModal.vue";
 import RescheduleRequest from "@/components/RescheduleRequest.vue";
 import RescheduleRequestModal from "@/components/RescheduleRequestModal.vue";
 
 /* Services & Firebase */
+import {
+  uploadImage
+} from "@/services/cloudinaryService";
 import { createStudent, updateStudent } from "@/services/studentService";
-import { createAttendance, updateAttendance } from "@/services/attendanceService";
+import {
+  createAttendance,
+  updateAttendance,
+} from "@/services/attendanceService";
 import { createUser, updateUser } from "@/services/userService";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "@/firebase/firebase"; // PATH SESUAI DENGAN EXPLORER ANDA
@@ -39,7 +44,13 @@ import { useReschedule } from "@/composables/useReschedule";
 /* ---------------------------------------------------- */
 /* AUTH & USER ROLE                                     */
 /* ---------------------------------------------------- */
-const { currentUser, userProfile, initAuth, loading, logout: authLogout } = useAuth();
+const {
+  currentUser,
+  userProfile,
+  initAuth,
+  loading,
+  logout: authLogout,
+} = useAuth();
 
 const role = computed(() => userProfile?.value?.role || "teacher");
 
@@ -53,9 +64,17 @@ const roleLabel = computed(() => {
 /* COMPOSABLES DATA DATA FETCHING                       */
 /* ---------------------------------------------------- */
 const { users, totalUsers, subscribeUsers, removeUser } = useUsers();
-const { students, totalStudents, subscribeStudents, removeStudent } = useStudents();
-const { attendance, totalAttendance, subscribeAttendance, deleteAttendance } = useAttendance();
-const { reschedules, pendingCount, subscribeReschedule, approveReschedule, rejectReschedule } = useReschedule();
+const { students, totalStudents, subscribeStudents, removeStudent } =
+  useStudents();
+const { attendance, totalAttendance, subscribeAttendance, deleteAttendance } =
+  useAttendance();
+const {
+  reschedules,
+  pendingCount,
+  subscribeReschedule,
+  approveReschedule,
+  rejectReschedule,
+} = useReschedule();
 
 /* ---------------------------------------------------- */
 /* NAVIGATION & MENU CONFIGURATION                      */
@@ -73,7 +92,6 @@ const menus = computed(() => {
     "Dashboard",
     "Student Management",
     "User Management",
-    "Student presence",
     "Reschedule Management",
   ];
 });
@@ -100,34 +118,74 @@ const teacherStats = computed(() => ({
 const myRequests = computed(() => {
   if (!userProfile.value?.studentId) return [];
   return reschedules.value.filter(
-    (item) => item.studentId === userProfile.value.studentId
+    (item) => item.studentId === userProfile.value.studentId,
   );
 });
 
 /* ---------------------------------------------------- */
 /* MODALS HANDLERS                                      */
 /* ---------------------------------------------------- */
-/* Attendance Modal */
-const showAttendanceModal = ref(false);
-const selectedAttendance = ref(null);
 
-const openAddAttendance = () => {
-  selectedAttendance.value = null;
-  showAttendanceModal.value = true;
-};
+const saveAttendanceBatch = async (payload) => {
+  try {
+    let photoUrl = "";
 
-const openEditAttendance = (item) => {
-  selectedAttendance.value = item;
-  showAttendanceModal.value = true;
-};
+    // Upload foto ke Cloudinary
+    if (payload.photo) {
+      photoUrl = await uploadImage(payload.photo);
+    }
 
-const saveAttendance = async (data) => {
-  if (data.id) {
-    await updateAttendance(data.id, data);
-  } else {
-    await createAttendance(data);
+    const attendanceData = payload.attendance || [];
+
+    for (const item of attendanceData) {
+      const dataToSave = {
+        ...item,
+
+        // Metadata absensi
+        kelas: payload.kelas,
+        mapel: payload.mapel,
+        tanggal: payload.tanggal,
+
+        // Foto & face detection
+        photoUrl,
+        detectedFaces: payload.detectedFaces,
+      };
+
+      if (item.id) {
+        await updateAttendance(
+          item.id,
+          dataToSave
+        );
+      } else {
+        await createAttendance(
+          dataToSave
+        );
+      }
+    }
+
+    console.log(
+      "✅ Attendance saved",
+      {
+        photoUrl,
+        totalData: attendanceData.length,
+        detectedFaces:
+          payload.detectedFaces,
+      }
+    );
+
+    alert(
+      "Data absensi berhasil disimpan"
+    );
+  } catch (error) {
+    console.error(
+      "❌ Save Attendance Error:",
+      error
+    );
+
+    alert(
+      "Gagal menyimpan absensi"
+    );
   }
-  showAttendanceModal.value = false;
 };
 
 const deleteAttendanceHandler = async (id) => {
@@ -335,20 +393,16 @@ onMounted(() => {
           </template>
 
           <!-- ATTENDANCE / STUDENT PRESENCE -->
-          <template v-if="activeMenu === 'Student presence' || activeMenu === 'Attendance'">
+          <template
+            v-if="
+              activeMenu === 'Student presence' || activeMenu === 'Attendance'
+            "
+          >
+
             <AttendanceManagement
               :students="students"
               :attendance="attendance"
-              @add="openAddAttendance"
-              @edit="openEditAttendance"
-              @delete="deleteAttendanceHandler"
-            />
-            <AttendanceModal
-              :show="showAttendanceModal"
-              :attendance="selectedAttendance"
-              :students="students"
-              @close="showAttendanceModal = false"
-              @save="saveAttendance"
+              @save-batch="saveAttendanceBatch"
             />
           </template>
 
@@ -369,10 +423,7 @@ onMounted(() => {
 
           <!-- RESCHEDULE REQUEST (Parent) -->
           <template v-if="activeMenu === 'Reschedule Request'">
-            <RescheduleRequest
-              :requests="myRequests"
-              @add="openAddRequest"
-            />
+            <RescheduleRequest :requests="myRequests" @add="openAddRequest" />
             <RescheduleRequestModal
               :show="showRequestModal"
               @close="showRequestModal = false"

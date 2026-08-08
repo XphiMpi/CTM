@@ -1,7 +1,9 @@
 <script setup>
-import { ref, computed, watch } from "vue";
 // Import CLASS_OPTIONS dari service kelas Anda
 import { CLASS_OPTIONS } from "@/services/classService"; // Sesuaikan path jika berbeda
+import { ref, computed, watch, onMounted } from "vue";
+
+import * as faceapi from "face-api.js";
 
 const props = defineProps({
   students: {
@@ -24,7 +26,12 @@ const selectedMapel = ref("Matematika");
 const selectedTanggal = ref(new Date().toISOString().split("T")[0]);
 const searchQuery = ref("");
 const isSaving = ref(false);
+const modelLoaded = ref(false);
 
+const attendancePhoto = ref(null);
+const attendancePhotoPreview = ref("");
+
+const detectedFaces = ref(0);
 const availableClasses = ref(CLASS_OPTIONS);
 
 const availableSubjects = ref([
@@ -35,6 +42,24 @@ const availableSubjects = ref([
   "IPS",
 ]);
 
+onMounted(async () => {
+  try {
+    await faceapi.nets.tinyFaceDetector.loadFromUri(
+      "/models"
+    );
+
+    modelLoaded.value = true;
+
+    console.log(
+      "✅ FaceAPI Loaded"
+    );
+  } catch (error) {
+    console.error(
+      "FaceAPI Load Error:",
+      error
+    );
+  }
+});
 /* -------------------------------------------------------------------------- */
 /* SINKRONISASI SISWA DENGAN MATCHING FLEXIBLE                                */
 /* -------------------------------------------------------------------------- */
@@ -57,7 +82,8 @@ const syncStudentList = () => {
     const isAktif = !s.status || normalizeString(s.status) === "aktif";
 
     // 2. Ambil nilai kelas dari berbagai kemungkinan nama property
-    const rawStudentClass = s.kelas || s.class || s.className || s.classId || "";
+    const rawStudentClass =
+      s.kelas || s.class || s.className || s.classId || "";
     const studentClassNormalized = normalizeString(rawStudentClass);
 
     // 3. Cocokkan kelas
@@ -72,10 +98,13 @@ const syncStudentList = () => {
       const matchId =
         (a.studentId && String(a.studentId) === String(siswa.studentId)) ||
         (a.studentDbId && String(a.studentDbId) === String(siswa.id)) ||
-        (a.namaSiswa && normalizeString(a.namaSiswa) === normalizeString(siswa.nama));
+        (a.namaSiswa &&
+          normalizeString(a.namaSiswa) === normalizeString(siswa.nama));
 
       const matchDate = a.tanggal === selectedTanggal.value;
-      const matchSubject = !a.mapel || normalizeString(a.mapel) === normalizeString(selectedMapel.value);
+      const matchSubject =
+        !a.mapel ||
+        normalizeString(a.mapel) === normalizeString(selectedMapel.value);
 
       return matchId && matchDate && matchSubject;
     });
@@ -92,11 +121,17 @@ const syncStudentList = () => {
 };
 
 watch(
-  [() => props.students, () => props.attendance, selectedKelas, selectedTanggal, selectedMapel],
+  [
+    () => props.students,
+    () => props.attendance,
+    selectedKelas,
+    selectedTanggal,
+    selectedMapel,
+  ],
   () => {
     syncStudentList();
   },
-  { immediate: true, deep: true }
+  { immediate: true, deep: true },
 );
 
 /* Filter Pencarian nama / studentId */
@@ -106,17 +141,25 @@ const filteredStudentList = computed(() => {
   return studentAttendanceList.value.filter(
     (s) =>
       s.nama.toLowerCase().includes(q) ||
-      (s.studentId && s.studentId.toString().toLowerCase().includes(q))
+      (s.studentId && s.studentId.toString().toLowerCase().includes(q)),
   );
 });
 
 /* -------------------------------------------------------------------------- */
 /* STATISTIK & REKAP KEHADIRAN                                               */
 /* -------------------------------------------------------------------------- */
-const countHadir = computed(() => studentAttendanceList.value.filter((s) => s.status === "Hadir").length);
-const countIzin = computed(() => studentAttendanceList.value.filter((s) => s.status === "Izin").length);
-const countSakit = computed(() => studentAttendanceList.value.filter((s) => s.status === "Sakit").length);
-const countAlfa = computed(() => studentAttendanceList.value.filter((s) => s.status === "Alfa").length);
+const countHadir = computed(
+  () => studentAttendanceList.value.filter((s) => s.status === "Hadir").length,
+);
+const countIzin = computed(
+  () => studentAttendanceList.value.filter((s) => s.status === "Izin").length,
+);
+const countSakit = computed(
+  () => studentAttendanceList.value.filter((s) => s.status === "Sakit").length,
+);
+const countAlfa = computed(
+  () => studentAttendanceList.value.filter((s) => s.status === "Alfa").length,
+);
 
 const totalSiswaInClass = computed(() => studentAttendanceList.value.length);
 
@@ -140,7 +183,9 @@ const formattedDateHeader = computed(() => {
 /* HANDLERS                                                                   */
 /* -------------------------------------------------------------------------- */
 const setStatus = (studentDbId, status) => {
-  const target = studentAttendanceList.value.find((s) => s.dbId === studentDbId);
+  const target = studentAttendanceList.value.find(
+    (s) => s.dbId === studentDbId,
+  );
   if (target) {
     target.status = status;
   }
@@ -151,10 +196,84 @@ const markAll = (status) => {
     s.status = status;
   });
 };
+const handlePhotoUpload = async (event) => {
+  try {
+    const file =
+      event.target.files?.[0];
 
+    if (!file) return;
+
+    attendancePhoto.value =
+      file;
+
+    const imageUrl =
+      URL.createObjectURL(file);
+
+    attendancePhotoPreview.value =
+      imageUrl;
+
+    const img = new Image();
+
+    img.src = imageUrl;
+
+    await new Promise(
+      (resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      }
+    );
+
+    if (!modelLoaded.value) {
+      alert(
+        "Model Face API belum siap"
+      );
+
+      return;
+    }
+
+    const detections =
+      await faceapi.detectAllFaces(
+        img,
+        new faceapi.TinyFaceDetectorOptions({
+          inputSize: 416,
+          scoreThreshold: 0.3,
+        })
+      );
+
+    console.log(
+      "Faces Detected:",
+      detections.length
+    );
+
+    detectedFaces.value =
+      detections.length;
+  } catch (error) {
+    console.error(
+      "Face Detection Error:",
+      error
+    );
+
+    detectedFaces.value = 0;
+  }
+};
 const saveAttendanceBatch = async () => {
+  if (!attendancePhoto.value) {
+    alert("Upload foto kelas terlebih dahulu");
+
+    return;
+  }
+
+  if (detectedFaces.value !== countHadir.value) {
+    alert(
+      `Jumlah wajah (${detectedFaces.value}) tidak sama dengan jumlah siswa hadir (${countHadir.value})`,
+    );
+
+    return;
+  }
   if (studentAttendanceList.value.length === 0) {
-    alert(`Tidak ada siswa aktif di kelas ${selectedKelas.value} untuk disimpan.`);
+    alert(
+      `Tidak ada siswa aktif di kelas ${selectedKelas.value} untuk disimpan.`,
+    );
     return;
   }
 
@@ -171,7 +290,19 @@ const saveAttendanceBatch = async () => {
       status: s.status,
     }));
 
-    emit("save-batch", payload);
+    emit("save-batch", {
+      attendance: payload,
+
+      photo: attendancePhoto.value,
+
+      detectedFaces: detectedFaces.value,
+
+      kelas: selectedKelas.value,
+
+      mapel: selectedMapel.value,
+
+      tanggal: selectedTanggal.value,
+    });
     alert("Data absensi berhasil disimpan!");
   } catch (error) {
     console.error("Gagal menyimpan absensi:", error);
@@ -185,7 +316,9 @@ const saveAttendanceBatch = async () => {
 <template>
   <div class="space-y-6 font-sans text-slate-800 pb-12">
     <!-- TOP HEADER -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div
+      class="flex flex-col md:flex-row md:items-center justify-between gap-4"
+    >
       <div class="flex items-center gap-4">
         <button
           @click="$emit('back')"
@@ -194,8 +327,12 @@ const saveAttendanceBatch = async () => {
           ← Kembali
         </button>
         <div>
-          <h2 class="text-2xl font-bold text-slate-900 tracking-tight">Absensi Siswa</h2>
-          <p class="text-xs text-slate-500 capitalize mt-0.5">{{ formattedDateHeader }}</p>
+          <h2 class="text-2xl font-bold text-slate-900 tracking-tight">
+            Absensi Siswa
+          </h2>
+          <p class="text-xs text-slate-500 capitalize mt-0.5">
+            {{ formattedDateHeader }}
+          </p>
         </div>
       </div>
 
@@ -213,9 +350,13 @@ const saveAttendanceBatch = async () => {
     </div>
 
     <!-- FILTER BAR -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white/60 p-1 rounded-2xl">
+    <div
+      class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white/60 p-1 rounded-2xl"
+    >
       <div>
-        <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+        <label
+          class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1"
+        >
           Kelas
         </label>
         <select
@@ -229,19 +370,25 @@ const saveAttendanceBatch = async () => {
       </div>
 
       <div>
-        <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+        <label
+          class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1"
+        >
           Mata Pelajaran
         </label>
         <select
           v-model="selectedMapel"
           class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         >
-          <option v-for="m in availableSubjects" :key="m" :value="m">{{ m }}</option>
+          <option v-for="m in availableSubjects" :key="m" :value="m">
+            {{ m }}
+          </option>
         </select>
       </div>
 
       <div>
-        <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+        <label
+          class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1"
+        >
           Tanggal
         </label>
         <input
@@ -252,10 +399,45 @@ const saveAttendanceBatch = async () => {
       </div>
     </div>
 
+    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+      <h3 class="font-bold mb-4">Foto Kehadiran Kelas</h3>
+
+      <input
+        type="file"
+        accept="image/*"
+        @change="handlePhotoUpload"
+        class="w-full border rounded-xl p-2"
+      />
+
+      <img
+        v-if="attendancePhotoPreview"
+        :src="attendancePhotoPreview"
+        class="mt-4 max-h-80 rounded-xl border"
+      />
+
+      <div class="mt-4 bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+        Wajah Terdeteksi:
+        <strong>
+          {{ detectedFaces }}
+        </strong>
+      </div>
+    </div>
+    <div
+      v-if="attendancePhoto && detectedFaces !== countHadir"
+      class="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700"
+    >
+      Jumlah wajah terdeteksi ({{ detectedFaces }}) tidak sama dengan jumlah
+      siswa hadir ({{ countHadir }})
+    </div>
+
     <!-- SUMMARY CARDS -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      <div class="bg-emerald-50/80 border border-emerald-200/60 rounded-2xl p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-emerald-100 border border-emerald-300 text-emerald-600 flex items-center justify-center font-bold text-lg">
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
+      <div
+        class="bg-emerald-50/80 border border-emerald-200/60 rounded-2xl p-4 flex items-center gap-3"
+      >
+        <div
+          class="w-10 h-10 rounded-xl bg-emerald-100 border border-emerald-300 text-emerald-600 flex items-center justify-center font-bold text-lg"
+        >
           ✓
         </div>
         <div>
@@ -264,8 +446,12 @@ const saveAttendanceBatch = async () => {
         </div>
       </div>
 
-      <div class="bg-amber-50/80 border border-amber-200/60 rounded-2xl p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-amber-100 border border-amber-300 text-amber-600 flex items-center justify-center font-bold text-lg">
+      <div
+        class="bg-amber-50/80 border border-amber-200/60 rounded-2xl p-4 flex items-center gap-3"
+      >
+        <div
+          class="w-10 h-10 rounded-xl bg-amber-100 border border-amber-300 text-amber-600 flex items-center justify-center font-bold text-lg"
+        >
           🕒
         </div>
         <div>
@@ -274,8 +460,12 @@ const saveAttendanceBatch = async () => {
         </div>
       </div>
 
-      <div class="bg-blue-50/80 border border-blue-200/60 rounded-2xl p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-blue-100 border border-blue-300 text-blue-600 flex items-center justify-center font-bold text-lg">
+      <div
+        class="bg-blue-50/80 border border-blue-200/60 rounded-2xl p-4 flex items-center gap-3"
+      >
+        <div
+          class="w-10 h-10 rounded-xl bg-blue-100 border border-blue-300 text-blue-600 flex items-center justify-center font-bold text-lg"
+        >
           !
         </div>
         <div>
@@ -284,8 +474,12 @@ const saveAttendanceBatch = async () => {
         </div>
       </div>
 
-      <div class="bg-rose-50/80 border border-rose-200/60 rounded-2xl p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-rose-100 border border-rose-300 text-rose-600 flex items-center justify-center font-bold text-lg">
+      <div
+        class="bg-rose-50/80 border border-rose-200/60 rounded-2xl p-4 flex items-center gap-3"
+      >
+        <div
+          class="w-10 h-10 rounded-xl bg-rose-100 border border-rose-300 text-rose-600 flex items-center justify-center font-bold text-lg"
+        >
           ⊗
         </div>
         <div>
@@ -294,17 +488,40 @@ const saveAttendanceBatch = async () => {
         </div>
       </div>
     </div>
+    <div
+      class="bg-purple-50 border border-purple-200 rounded-2xl p-4 flex items-center gap-3"
+    >
+      <div
+        class="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center"
+      >
+        👤
+      </div>
+
+      <div>
+        <p class="text-2xl font-black text-purple-800">
+          {{ detectedFaces }}
+        </p>
+
+        <p class="text-[11px] font-semibold text-purple-600">Face Count</p>
+      </div>
+    </div>
 
     <!-- TINGKAT KEHADIRAN -->
-    <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm space-y-3">
-      <div class="flex items-center justify-between text-xs font-bold text-slate-700">
+    <div
+      class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm space-y-3"
+    >
+      <div
+        class="flex items-center justify-between text-xs font-bold text-slate-700"
+      >
         <span>Tingkat Kehadiran - {{ selectedKelas }}</span>
-        <span class="text-rose-600 font-extrabold text-sm">{{ attendancePercentage }}%</span>
+        <span class="text-rose-600 font-extrabold text-sm"
+          >{{ attendancePercentage }}%</span
+        >
       </div>
 
       <div class="w-full bg-slate-100 rounded-full h-3.5 overflow-hidden p-0.5">
         <div
-          class="bg-gradient-to-r from-rose-500 via-amber-500 to-emerald-500 h-full rounded-full transition-all duration-500"
+          class="bg-linear-to-r from-rose-500 via-amber-500 to-emerald-500 h-full rounded-full transition-all duration-500"
           :style="{ width: `${attendancePercentage}%` }"
         ></div>
       </div>
@@ -315,8 +532,12 @@ const saveAttendanceBatch = async () => {
     </div>
 
     <!-- TABLE DAFTAR SISWA -->
-    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-      <div class="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100">
+    <div
+      class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden"
+    >
+      <div
+        class="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100"
+      >
         <h3 class="text-base font-bold text-slate-900">
           Daftar Siswa Kelas {{ selectedKelas }}
         </h3>
@@ -329,7 +550,9 @@ const saveAttendanceBatch = async () => {
             class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-1.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-44"
           />
 
-          <div class="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+          <div
+            class="flex items-center gap-1.5 text-xs font-medium text-slate-500"
+          >
             <span>Tandai semua :</span>
             <button
               @click="markAll('Hadir')"
@@ -349,7 +572,9 @@ const saveAttendanceBatch = async () => {
 
       <div class="overflow-x-auto">
         <table class="w-full text-left text-sm text-slate-700">
-          <thead class="bg-slate-50/70 text-[11px] font-semibold uppercase text-slate-400 border-b border-slate-100">
+          <thead
+            class="bg-slate-50/70 text-[11px] font-semibold uppercase text-slate-400 border-b border-slate-100"
+          >
             <tr>
               <th class="py-3.5 px-6 w-16">No</th>
               <th class="py-3.5 px-6">Nama Siswa</th>
@@ -363,9 +588,15 @@ const saveAttendanceBatch = async () => {
               :key="siswa.dbId"
               class="hover:bg-slate-50/50 transition-colors"
             >
-              <td class="py-4 px-6 text-slate-400 font-semibold">{{ idx + 1 }}</td>
-              <td class="py-4 px-6 font-bold text-slate-900">{{ siswa.nama }}</td>
-              <td class="py-4 px-6 text-slate-400 text-xs tracking-wider">{{ siswa.studentId || '-' }}</td>
+              <td class="py-4 px-6 text-slate-400 font-semibold">
+                {{ idx + 1 }}
+              </td>
+              <td class="py-4 px-6 font-bold text-slate-900">
+                {{ siswa.nama }}
+              </td>
+              <td class="py-4 px-6 text-slate-400 text-xs tracking-wider">
+                {{ siswa.studentId || "-" }}
+              </td>
               <td class="py-4 px-6">
                 <div class="flex items-center justify-center gap-2">
                   <button
@@ -421,7 +652,9 @@ const saveAttendanceBatch = async () => {
 
             <tr v-if="filteredStudentList.length === 0">
               <td colspan="4" class="py-12 text-center text-slate-400 text-sm">
-                Tidak ada data siswa berstatus "Aktif" ditemukan untuk kelas <strong>{{ selectedKelas }}</strong>.
+                Tidak ada data siswa berstatus "Aktif" ditemukan untuk kelas
+                <strong>{{ selectedKelas }}</strong
+                >.
               </td>
             </tr>
           </tbody>
