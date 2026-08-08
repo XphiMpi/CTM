@@ -22,9 +22,7 @@ import RescheduleRequest from "@/components/RescheduleRequest.vue";
 import RescheduleRequestModal from "@/components/RescheduleRequestModal.vue";
 
 /* Services & Firebase */
-import {
-  uploadImage
-} from "@/services/cloudinaryService";
+import { uploadImage } from "@/services/cloudinaryService";
 import { createStudent, updateStudent } from "@/services/studentService";
 import {
   createAttendance,
@@ -103,11 +101,18 @@ const changeMenu = (menu) => {
 /* ---------------------------------------------------- */
 /* DASHBOARD STATS                                      */
 /* ---------------------------------------------------- */
+const activeStudents = computed(
+  () =>
+    students.value.filter(
+      (student) => student.status === "Aktif"
+    ).length
+);
+
 const adminStats = computed(() => ({
   students: totalStudents.value,
   users: totalUsers.value,
-  attendance: totalAttendance.value,
   pendingReschedule: pendingCount.value,
+  activeStudents: activeStudents.value,
 }));
 
 const teacherStats = computed(() => ({
@@ -152,39 +157,23 @@ const saveAttendanceBatch = async (payload) => {
       };
 
       if (item.id) {
-        await updateAttendance(
-          item.id,
-          dataToSave
-        );
+        await updateAttendance(item.id, dataToSave);
       } else {
-        await createAttendance(
-          dataToSave
-        );
+        await createAttendance(dataToSave);
       }
     }
 
-    console.log(
-      "✅ Attendance saved",
-      {
-        photoUrl,
-        totalData: attendanceData.length,
-        detectedFaces:
-          payload.detectedFaces,
-      }
-    );
+    console.log("✅ Attendance saved", {
+      photoUrl,
+      totalData: attendanceData.length,
+      detectedFaces: payload.detectedFaces,
+    });
 
-    alert(
-      "Data absensi berhasil disimpan"
-    );
+    alert("Data absensi berhasil disimpan");
   } catch (error) {
-    console.error(
-      "❌ Save Attendance Error:",
-      error
-    );
+    console.error("❌ Save Attendance Error:", error);
 
-    alert(
-      "Gagal menyimpan absensi"
-    );
+    alert("Gagal menyimpan absensi");
   }
 };
 
@@ -344,6 +333,8 @@ onMounted(() => {
           <AdminDashboard
             v-if="role === 'admin' && activeMenu === 'Dashboard'"
             :stats="adminStats"
+            :users="users"
+            :students="students"
           />
 
           <TeacherDashboard
@@ -398,7 +389,6 @@ onMounted(() => {
               activeMenu === 'Student presence' || activeMenu === 'Attendance'
             "
           >
-
             <AttendanceManagement
               :students="students"
               :attendance="attendance"

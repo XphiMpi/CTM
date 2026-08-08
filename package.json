@@ -12,10 +12,12 @@
     "@motionone/vue": "^10.16.4",
     "@vueuse/motion": "^3.0.3",
     "axios": "^1.19.0",
+    "chart.js": "^4.5.1",
     "cloudinary": "^2.10.0",
     "face-api.js": "^0.22.2",
     "firebase": "^12.13.0",
     "vue": "^3.5.34",
+    "vue-chartjs": "^5.3.4",
     "vue-router": "^5.0.7"
   },
   "devDependencies": {
