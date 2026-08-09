@@ -52,7 +52,7 @@ const linkChild = () => {
 
         <button
           @click="showAddChildModal = true"
-          class="bg-white text-blue-700 px-4 py-2 rounded-lg font-semibold text-sm hover:bg-blue-50"
+          class="bg-white text-blue-700 px-3 py-2 md:px-4 rounded-lg font-semibold text-xs md:text-sm hover:bg-blue-50"
         >
           + Tambah Anak
         </button>
@@ -193,7 +193,7 @@ const linkChild = () => {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
     >
       <div
-        class="bg-white rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl"
+        class="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl"
       >
         <!-- Header -->
         <div
@@ -214,14 +214,14 @@ const linkChild = () => {
         </div>
 
         <!-- Content -->
-        <div class="grid md:grid-cols-2 gap-6 p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
           <!-- Foto -->
           <div>
             <img
               v-if="selectedPhoto"
               :src="selectedPhoto"
               alt="Foto Validasi"
-              class="w-full h-80 object-cover rounded-2xl border shadow"
+              class="w-full max-h-[50vh] md:max-h-[70vh] object-contain rounded-2xl border shadow"
             />
 
             <div

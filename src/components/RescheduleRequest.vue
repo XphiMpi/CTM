@@ -28,7 +28,7 @@ defineEmits(["add"]);
 
         <button
           @click="$emit('add')"
-          class="bg-white text-[#0C37D3] font-semibold px-5 py-3 rounded-xl hover:bg-gray-100 transition"
+          class="bg-white text-blue-700 px-3 py-2 md:px-4 rounded-lg font-semibold text-xs md:text-sm hover:bg-blue-50"
         >
           + Request Baru
         </button>
