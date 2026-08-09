@@ -15,10 +15,10 @@ const attendance = ref([]);
 export function useAttendance() {
   const subscribeAttendance = () => {
     return onSnapshot(collection(db, "attendance"), (snapshot) => {
-      attendance.value = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+    attendance.value = snapshot.docs.map((doc) => ({
+      ...doc.data(),
+      id: doc.id,
+    }));
     });
   };
 

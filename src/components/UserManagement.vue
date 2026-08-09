@@ -14,25 +14,14 @@ defineEmits(["add", "edit", "delete"]);
     <div
       class="px-8 py-6 border-b border-gray-100 bg-linear-to-r from-slate-50 to-blue-50"
     >
-      <div
-        class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-      >
+     <div>
         <div>
-          <h2 class="text-2xl font-bold text-gray-800">
-            User Management
-          </h2>
+          <h2 class="text-2xl font-bold text-gray-800">User Management</h2>
 
           <p class="text-sm text-gray-500 mt-1">
             Kelola data admin, teacher, dan parent
           </p>
         </div>
-
-        <button
-          @click="$emit('add')"
-          class="bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-5 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
-        >
-          + Tambah User
-        </button>
       </div>
     </div>
 
@@ -87,9 +76,7 @@ defineEmits(["add", "edit", "delete"]);
                     {{ user.nama }}
                   </p>
 
-                  <p class="text-xs text-gray-400">
-                    ID #{{ user.id }}
-                  </p>
+                  <p class="text-xs text-gray-400">ID #{{ user.id }}</p>
                 </div>
               </div>
             </td>
@@ -97,6 +84,16 @@ defineEmits(["add", "edit", "delete"]);
             <!-- Email -->
             <td class="px-6 py-4 text-gray-600">
               {{ user.email }}
+              <p
+                class="text-xs mt-1"
+                :class="
+                  user.status === 'inactive'
+                    ? 'text-red-500'
+                    : 'text-emerald-500'
+                "
+              >
+                {{ user.status || "active" }}
+              </p>
             </td>
 
             <!-- Role -->
@@ -111,7 +108,7 @@ defineEmits(["add", "edit", "delete"]);
                     user.role === 'teacher',
 
                   'bg-green-100 text-green-700 border-green-200':
-                    user.role === 'parent'
+                    user.role === 'parent',
                 }"
               >
                 <span
@@ -119,7 +116,7 @@ defineEmits(["add", "edit", "delete"]);
                   :class="{
                     'bg-red-500': user.role === 'admin',
                     'bg-blue-500': user.role === 'teacher',
-                    'bg-green-500': user.role === 'parent'
+                    'bg-green-500': user.role === 'parent',
                   }"
                 ></span>
 
@@ -139,9 +136,9 @@ defineEmits(["add", "edit", "delete"]);
 
                 <button
                   @click="$emit('delete', user.id)"
-                  class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-medium shadow-md hover:shadow-lg transition-all duration-200"
+                  class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-xl text-sm font-medium shadow-md"
                 >
-                  Delete
+                  Nonaktifkan
                 </button>
               </div>
             </td>
@@ -164,15 +161,8 @@ defineEmits(["add", "edit", "delete"]);
                 </h3>
 
                 <p class="text-sm text-gray-400 mt-1">
-                  Tambahkan user baru untuk mulai mengelola sistem.
+                  Belum ada pengguna yang melakukan registrasi.
                 </p>
-
-                <button
-                  @click="$emit('add')"
-                  class="mt-5 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl transition"
-                >
-                  Tambah User
-                </button>
               </div>
             </td>
           </tr>

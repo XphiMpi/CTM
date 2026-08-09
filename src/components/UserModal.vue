@@ -9,15 +9,13 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits([
-  "close",
-  "save",
-]);
+const emit = defineEmits(["close", "save"]);
 
 const form = ref({
   nama: "",
   email: "",
   phone: "",
+  password: "",
   role: "teacher",
 });
 
@@ -35,15 +33,17 @@ watch(
       };
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 const submit = () => {
-  if (
-    !form.value.nama ||
-    !form.value.email
-  ) {
+  if (!form.value.nama || !form.value.email) {
     alert("Nama dan email wajib diisi");
+    return;
+  }
+
+  if (!props.user && !form.value.password) {
+    alert("Password wajib diisi");
     return;
   }
 
@@ -72,9 +72,7 @@ const submit = () => {
 
       <div class="space-y-4">
         <div>
-          <label class="block mb-1 text-sm">
-            Nama
-          </label>
+          <label class="block mb-1 text-sm"> Nama </label>
 
           <input
             v-model="form.nama"
@@ -84,9 +82,7 @@ const submit = () => {
         </div>
 
         <div>
-          <label class="block mb-1 text-sm">
-            Email
-          </label>
+          <label class="block mb-1 text-sm"> Email </label>
 
           <input
             type="email"
@@ -96,10 +92,19 @@ const submit = () => {
           />
         </div>
 
+        <div v-if="!user">
+          <label class="block mb-1 text-sm"> Password </label>
+
+          <input
+            v-model="form.password"
+            type="password"
+            placeholder="Minimal 6 karakter"
+            class="w-full border rounded-lg p-3"
+          />
+        </div>
+
         <div>
-          <label class="block mb-1 text-sm">
-            No HP
-          </label>
+          <label class="block mb-1 text-sm"> No HP </label>
 
           <input
             v-model="form.phone"
@@ -109,29 +114,16 @@ const submit = () => {
         </div>
 
         <div>
-          <label class="block mb-1 text-sm">
-            Role
-          </label>
+          <label class="block mb-1 text-sm"> Role </label>
 
-          <select
-            v-model="form.role"
-            class="w-full border rounded-lg p-3"
-          >
-            <option value="admin">
-              Admin
-            </option>
+          <select v-model="form.role" class="w-full border rounded-lg p-3">
+            <option value="admin">Admin</option>
 
-            <option value="teacher">
-              Teacher
-            </option>
+            <option value="teacher">Teacher</option>
 
-            <option value="monitor">
-              Monitor
-            </option>
+            <option value="monitor">Monitor</option>
 
-            <option value="parent">
-              Parent
-            </option>
+            <option value="parent">Parent</option>
           </select>
         </div>
 

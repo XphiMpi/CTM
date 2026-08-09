@@ -133,6 +133,8 @@ const submit = async () => {
         role: finalRole,
         type,
 
+        status: "active",
+
         teacherId:
           type === "teacher"
             ? teacherId.value

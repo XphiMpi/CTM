@@ -64,11 +64,9 @@ const availableClasses = ref(CLASS_OPTIONS);
 /* -------------------------------------------------------------------------- */
 
 const availableSubjects = ref([
-  "Matematika",
-  "Bahasa Indonesia",
-  "Bahasa Inggris",
-  "IPA",
-  "IPS",
+  "Mathematics",
+  "English",
+  "Physics"
 ]);
 
 /* -------------------------------------------------------------------------- */

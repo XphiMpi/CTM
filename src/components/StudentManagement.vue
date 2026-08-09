@@ -1,6 +1,14 @@
 <script setup>
-defineProps({
+import { computed } from "vue";
+
+const props = defineProps({
   students: Array,
+});
+
+const sortedStudents = computed(() => {
+  return [...(props.students || [])].sort((a, b) =>
+    (a.studentId || "").localeCompare(b.studentId || "")
+  );
 });
 
 defineEmits(["add", "edit", "delete"]);
@@ -114,7 +122,7 @@ defineEmits(["add", "edit", "delete"]);
 
           <tbody>
             <tr
-              v-for="student in students"
+              v-for="student in sortedStudents"
               :key="student.id"
               class="border-b border-gray-100 even:bg-slate-50/50 hover:bg-blue-50 transition-all duration-200"
             >

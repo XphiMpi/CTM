@@ -20,7 +20,21 @@ export function useAuth() {
 
       currentUser.value = user;
 
-      userProfile.value = await getUserById(user.uid);
+      const profile = await getUserById(user.uid);
+
+      if (profile?.status === "inactive") {
+        alert("Akun telah dinonaktifkan admin");
+
+        await signOut(auth);
+
+        currentUser.value = null;
+        userProfile.value = null;
+        loading.value = false;
+
+        return;
+      }
+
+      userProfile.value = profile;
 
       loading.value = false;
     });

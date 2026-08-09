@@ -9,10 +9,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits([
-  "close",
-  "approve",
-]);
+const emit = defineEmits(["close", "approve"]);
 
 const form = ref({
   tanggalPengganti: "",
@@ -31,7 +28,7 @@ watch(
       catatan: "",
     };
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 const submit = () => {
@@ -49,47 +46,46 @@ const submit = () => {
   >
     <div class="bg-white w-137.5 rounded-xl p-6">
       <div class="flex justify-between mb-5">
-        <h2 class="text-lg font-bold">
-          Approve Reschedule
-        </h2>
+        <h2 class="text-xl font-bold">Approval Reschedule</h2>
 
-        <button @click="$emit('close')">
-          ✕
-        </button>
+        <button @click="$emit('close')">✕</button>
       </div>
 
       <div class="space-y-4">
         <input
-          v-model="form.tanggalPengganti"
+          v-model="form.tanggal"
           type="date"
-          class="w-full border rounded-lg p-3"
+          class="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 outline-none"
         />
 
         <input
-          v-model="form.jamPengganti"
+          v-model="form.jam"
           type="time"
-          class="w-full border rounded-lg p-3"
-        />
-
-        <input
-          v-model="form.kelasPengganti"
-          placeholder="Kelas Pengganti"
-          class="w-full border rounded-lg p-3"
+          class="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 outline-none"
         />
 
         <textarea
-          v-model="form.catatan"
-          rows="3"
-          placeholder="Catatan"
-          class="w-full border rounded-lg p-3"
+          v-model="form.alasan"
+          rows="4"
+          placeholder="Catatan untuk siswa..."
+          class="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 outline-none"
         />
 
-        <button
-          @click="submit"
-          class="w-full bg-green-600 text-white py-3 rounded-lg"
-        >
-          Approve
-        </button>
+        <div class="flex justify-end gap-3">
+          <button
+            @click="$emit('close')"
+            class="px-5 py-3 rounded-xl border border-slate-200 hover:bg-slate-50"
+          >
+            Batal
+          </button>
+
+          <button
+            @click="submit"
+            class="px-5 py-3 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 text-white shadow-lg hover:shadow-xl"
+          >
+            Simpan & Setujui
+          </button>
+        </div>
       </div>
     </div>
   </div>

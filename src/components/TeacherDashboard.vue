@@ -19,7 +19,11 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["open-absensi", "view-all-absensi"]);
+const emit = defineEmits([
+  "open-absensi",
+  "view-all-absensi",
+  "delete-attendance",
+]);
 
 /* ---------------------------------------------------- */
 /* REKAP ABSENSI REALTIME DARI DATABASE                 */
@@ -242,9 +246,7 @@ const progressTask = computed(() => {
         <div
           class="flex items-center justify-between pb-4 border-b border-slate-100"
         >
-          <h3 class="text-base font-bold text-slate-900">
-            Rekap Absensi Terkini
-          </h3>
+          <h3 class="text-base font-bold text-slate-900">Ringkasan Absensi</h3>
           <button
             @click="emit('open-absensi')"
             class="text-xs font-semibold text-blue-600 hover:underline cursor-pointer"
@@ -281,6 +283,17 @@ const progressTask = computed(() => {
               <span class="text-rose-500 flex items-center gap-1">
                 🚫 {{ item.alfa }} Alfa
               </span>
+              <button
+                @click="
+                  emit('delete-attendance', {
+                    kelas: item.kelas,
+                    tanggal: item.tanggal,
+                  })
+                "
+                class="px-3 py-1 rounded-lg bg-red-100 text-red-600"
+              >
+                Hapus
+              </button>
             </div>
           </div>
         </div>

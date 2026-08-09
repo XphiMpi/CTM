@@ -29,8 +29,15 @@ import {
   updateAttendance,
 } from "@/services/attendanceService";
 import { createUser, updateUser } from "@/services/userService";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "@/firebase/firebase"; // PATH SESUAI DENGAN EXPLORER ANDA
+import {
+  setDoc,
+  doc,
+  addDoc,
+  collection,
+  serverTimestamp,
+} from "firebase/firestore";
+import { auth, db } from "@/firebase/firebase";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 
 /* Composables */
 import { useAuth } from "@/composables/useAuth";
@@ -102,10 +109,7 @@ const changeMenu = (menu) => {
 /* DASHBOARD STATS                                      */
 /* ---------------------------------------------------- */
 const activeStudents = computed(
-  () =>
-    students.value.filter(
-      (student) => student.status === "Aktif"
-    ).length
+  () => students.value.filter((student) => student.status === "Aktif").length,
 );
 
 const adminStats = computed(() => ({
@@ -183,6 +187,33 @@ const deleteAttendanceHandler = async (id) => {
   }
 };
 
+const deleteAttendanceGroup = async ({
+  kelas,
+  tanggal,
+}) => {
+  if (
+    !confirm(
+      `Hapus absensi ${kelas} tanggal ${tanggal}?`
+    )
+  ) {
+    return;
+  }
+
+  const data = attendance.value.filter(
+    (item) =>
+      item.kelas === kelas &&
+      (item.tanggal || item.date) === tanggal
+  );
+
+  console.log("Data ditemukan:", data);
+
+  for (const item of data) {
+    if (!item?.id) continue;
+
+    await deleteAttendance(item.id);
+  }
+};
+
 /* Student Modal */
 const showStudentModal = ref(false);
 const selectedStudent = ref(null);
@@ -216,15 +247,6 @@ const deleteStudentHandler = async (id) => {
   }
 };
 
-/* User Modal */
-const showUserModal = ref(false);
-const selectedUser = ref(null);
-
-const openAddUser = () => {
-  selectedUser.value = null;
-  showUserModal.value = true;
-};
-
 const openEditUser = (user) => {
   selectedUser.value = user;
   showUserModal.value = true;
@@ -233,21 +255,46 @@ const openEditUser = (user) => {
 const saveUser = async (data) => {
   try {
     if (data.id) {
-      await updateUser(data.id, data);
+      await updateUser(data.id, {
+        nama: data.nama,
+        email: data.email,
+        phone: data.phone,
+        role: data.role,
+      });
     } else {
-      const id = crypto.randomUUID();
-      await createUser(id, data);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        data.email,
+        data.password,
+      );
+
+      await setDoc(doc(db, "users", userCredential.user.uid), {
+        uid: userCredential.user.uid,
+
+        nama: data.nama,
+        email: data.email,
+        phone: data.phone,
+        role: data.role,
+
+        status: "active",
+
+        createdAt: serverTimestamp(),
+      });
     }
+
     showUserModal.value = false;
   } catch (error) {
-    console.error("Gagal menyimpan user:", error);
+    console.error(error);
+    alert(error.message);
   }
 };
 
 const deleteUserHandler = async (id) => {
-  if (confirm("Hapus user ini?")) {
-    await removeUser(id);
-  }
+  if (!confirm("Nonaktifkan akun ini?")) return;
+
+  await updateUser(id, {
+    status: "inactive",
+  });
 };
 
 /* Reschedule Modal */
@@ -277,13 +324,25 @@ const approveHandler = (item) => {
   showRescheduleModal.value = true;
 };
 
+const approveDirect = async (item) => {
+  try {
+    await approveReschedule(item.id, {
+      tanggal: item.tanggal,
+      jam: item.jam,
+      catatan: "Disetujui admin",
+    });
+  } catch (error) {
+    console.error("Gagal approve:", error);
+  }
+};
+
 const saveApproval = async (payload) => {
-  await approveReschedule(payload.requestId, {
-    tanggal: payload.tanggalPengganti,
-    jam: payload.jamPengganti,
-    kelas: payload.kelasPengganti,
-    catatan: payload.catatan,
+  await approveReschedule(selectedRequest.value.id, {
+    tanggal: payload.tanggal,
+    jam: payload.jam,
+    catatan: payload.alasan,
   });
+
   showRescheduleModal.value = false;
 };
 
@@ -343,6 +402,7 @@ onMounted(() => {
             :attendance-list="attendance"
             :student-list="students"
             @open-absensi="changeMenu('Student presence')"
+            @delete-attendance="deleteAttendanceGroup"
           />
 
           <ParentDashboard
@@ -371,7 +431,6 @@ onMounted(() => {
           <template v-if="activeMenu === 'User Management'">
             <UserManagement
               :users="users"
-              @add="openAddUser"
               @edit="openEditUser"
               @delete="deleteUserHandler"
             />
@@ -400,7 +459,8 @@ onMounted(() => {
           <template v-if="activeMenu === 'Reschedule Management'">
             <RescheduleManagement
               :reschedules="reschedules"
-              @approve="approveHandler"
+              @approve="approveDirect"
+              @edit-schedule="approveHandler"
               @reject="rejectHandler"
             />
             <RescheduleModal
