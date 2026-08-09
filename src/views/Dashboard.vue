@@ -31,8 +31,10 @@ import {
 import { createUser, updateUser } from "@/services/userService";
 import {
   setDoc,
+  updateDoc,
   doc,
   addDoc,
+  arrayUnion,
   collection,
   serverTimestamp,
 } from "firebase/firestore";
@@ -65,6 +67,26 @@ const roleLabel = computed(() => {
   return "TEACHER";
 });
 
+const linkChild = async (studentId) => {
+  try {
+    const student = students.value.find((item) => item.studentId === studentId);
+
+    if (!student) {
+      alert("Student ID tidak ditemukan");
+      return;
+    }
+
+    await updateDoc(doc(db, "users", userProfile.value.uid), {
+      studentIds: arrayUnion(studentId),
+    });
+
+    alert("Anak berhasil ditambahkan");
+    await initAuth();
+  } catch (error) {
+    console.error(error);
+  }
+};
+
 /* ---------------------------------------------------- */
 /* COMPOSABLES DATA DATA FETCHING                       */
 /* ---------------------------------------------------- */
@@ -85,6 +107,7 @@ const {
 /* NAVIGATION & MENU CONFIGURATION                      */
 /* ---------------------------------------------------- */
 const activeMenu = ref("Dashboard");
+const sidebarOpen = ref(false);
 
 const menus = computed(() => {
   if (role.value === "parent") {
@@ -103,7 +126,10 @@ const menus = computed(() => {
 
 const changeMenu = (menu) => {
   activeMenu.value = menu;
+  sidebarOpen.value = false; // tutup sidebar di mobile setelah klik menu
 };
+
+const showAddChildModal = ref(false);
 
 /* ---------------------------------------------------- */
 /* DASHBOARD STATS                                      */
@@ -125,9 +151,10 @@ const teacherStats = computed(() => ({
 }));
 
 const myRequests = computed(() => {
-  if (!userProfile.value?.studentId) return [];
+  const ids = userProfile.value?.studentIds || [];
+
   return reschedules.value.filter(
-    (item) => item.studentId === userProfile.value.studentId,
+    (item) => ids.includes(item.studentId)
   );
 });
 
@@ -187,22 +214,13 @@ const deleteAttendanceHandler = async (id) => {
   }
 };
 
-const deleteAttendanceGroup = async ({
-  kelas,
-  tanggal,
-}) => {
-  if (
-    !confirm(
-      `Hapus absensi ${kelas} tanggal ${tanggal}?`
-    )
-  ) {
+const deleteAttendanceGroup = async ({ kelas, tanggal }) => {
+  if (!confirm(`Hapus absensi ${kelas} tanggal ${tanggal}?`)) {
     return;
   }
 
   const data = attendance.value.filter(
-    (item) =>
-      item.kelas === kelas &&
-      (item.tanggal || item.date) === tanggal
+    (item) => item.kelas === kelas && (item.tanggal || item.date) === tanggal,
   );
 
   console.log("Data ditemukan:", data);
@@ -215,6 +233,30 @@ const deleteAttendanceGroup = async ({
 };
 
 /* Student Modal */
+const myChildren = computed(() => {
+  const ids = userProfile.value?.studentIds || [];
+
+  console.log("IDS", ids);
+
+  return students.value.filter((student) => {
+    console.log("cek", student.studentId, ids.includes(student.studentId));
+
+    return ids.includes(student.studentId);
+  });
+});
+
+const myAttendance = computed(() => {
+  const ids = userProfile.value?.studentIds || [];
+
+  if (ids.length) {
+    return attendance.value.filter((item) => ids.includes(item.studentId));
+  }
+
+  return attendance.value.filter(
+    (item) => item.studentId === userProfile.value?.studentId,
+  );
+});
+
 const showStudentModal = ref(false);
 const selectedStudent = ref(null);
 
@@ -307,16 +349,19 @@ const openAddRequest = () => {
 };
 
 const saveRequest = async (data) => {
+  const child = myChildren.value.find(
+    (item) => item.studentId === data.studentId,
+  );
+
   await addDoc(collection(db, "reschedules"), {
-    studentId: userProfile.value?.studentId || "",
-    studentName: userProfile.value?.studentName || "",
+    studentId: child.studentId,
+    studentName: child.nama,
     tanggal: data.tanggal,
     jam: data.jam,
     alasan: data.alasan,
     status: "Menunggu",
     createdAt: serverTimestamp(),
   });
-  showRequestModal.value = false;
 };
 
 const approveHandler = (item) => {
@@ -337,11 +382,13 @@ const approveDirect = async (item) => {
 };
 
 const saveApproval = async (payload) => {
-  await approveReschedule(selectedRequest.value.id, {
-    tanggal: payload.tanggal,
-    jam: payload.jam,
-    catatan: payload.alasan,
-  });
+  await approveReschedule(
+    selectedRequest.value.id,
+    {
+      tanggal: payload.tanggal,
+      jam: payload.jam,
+    }
+  );
 
   showRescheduleModal.value = false;
 };
@@ -370,19 +417,26 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex h-screen bg-[#f1f2fb]">
+  <div class="flex h-dvh bg-[#f1f2fb]">
     <!-- SIDEBAR -->
     <Sidebar
       :menus="menus"
       :activeMenu="activeMenu"
       :role-label="roleLabel"
+      :isOpen="sidebarOpen"
       @change-menu="changeMenu"
       @logout="logout"
+      @close="sidebarOpen = false"
     />
 
     <!-- MAIN CONTENT -->
     <main class="flex-1 flex flex-col overflow-hidden">
-      <Topbar :user="userProfile" :role-label="roleLabel" />
+      <!-- Mobile Header -->
+      <Topbar
+        :user="userProfile"
+        :role-label="roleLabel"
+        @toggle-sidebar="sidebarOpen = true"
+      />
 
       <section class="flex-1 overflow-y-auto p-6">
         <div v-if="loading" class="text-center py-10">Loading...</div>
@@ -407,8 +461,9 @@ onMounted(() => {
 
           <ParentDashboard
             v-if="role === 'parent' && activeMenu === 'Dashboard'"
-            :attendance="attendance"
-            :children="students"
+            :attendance="myAttendance"
+            :children="myChildren"
+            @save-child="linkChild"
           />
 
           <!-- STUDENT MANAGEMENT (Admin Only) -->
@@ -476,6 +531,7 @@ onMounted(() => {
             <RescheduleRequest :requests="myRequests" @add="openAddRequest" />
             <RescheduleRequestModal
               :show="showRequestModal"
+              :children="myChildren"
               @close="showRequestModal = false"
               @save="saveRequest"
             />

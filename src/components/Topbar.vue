@@ -3,30 +3,40 @@ defineProps({
   user: Object,
   roleLabel: String,
 });
+
+defineEmits(["toggle-sidebar"]);
 </script>
 
 <template>
   <header
-    class="sticky top-0 z-20 h-20 px-6 flex items-center justify-between bg-white/80 backdrop-blur-xl border-b border-slate-200"
+    class="sticky top-[env(safe-area-inset-top)] z-20 h-20 px-4 md:px-6 flex items-center justify-between bg-white/80 backdrop-blur-xl border-b border-slate-200"
   >
     <!-- Left -->
-    <div>
-      <p
-        class="text-xs uppercase tracking-widest text-blue-600 font-semibold"
+    <div class="flex items-center gap-3">
+      <!-- Hamburger Mobile -->
+      <button
+        @click="$emit('toggle-sidebar')"
+        class="md:hidden text-2xl font-bold text-slate-700"
       >
-        Selamat Datang
-      </p>
+        ☰
+      </button>
 
-      <h2
-        class="text-2xl font-bold text-slate-800 mt-1"
-      >
-        {{ user?.nama || "User" }}
-      </h2>
+      <div>
+        <p
+          class="text-xs uppercase tracking-widest text-blue-600 font-semibold"
+        >
+          Selamat Datang
+        </p>
+
+        <h2 class="text-lg md:text-2xl font-bold text-slate-800 mt-1">
+          {{ user?.nama || "User" }}
+        </h2>
+      </div>
     </div>
 
     <!-- Right -->
     <div
-      class="flex items-center gap-4 bg-white rounded-2xl px-4 py-2 shadow-md border border-slate-100"
+      class="flex items-center gap-2 md:gap-4 bg-white rounded-2xl px-3 md:px-4 py-2 shadow-md border border-slate-100"
     >
       <!-- Avatar -->
       <div
@@ -36,21 +46,15 @@ defineProps({
       </div>
 
       <!-- User Info -->
-      <div>
-        <p
-          class="text-sm font-semibold text-slate-800"
-        >
+      <div class="hidden md:block">
+        <p class="text-sm font-semibold text-slate-800">
           {{ user?.nama }}
         </p>
 
         <div class="flex items-center gap-2 mt-1">
-          <span
-            class="w-2 h-2 rounded-full bg-emerald-500"
-          ></span>
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
 
-          <p
-            class="text-xs font-medium text-slate-500"
-          >
+          <p class="text-xs font-medium text-slate-500">
             {{ roleLabel }}
           </p>
         </div>

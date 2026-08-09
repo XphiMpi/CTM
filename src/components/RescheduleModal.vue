@@ -9,33 +9,35 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["close", "approve"]);
+const emit = defineEmits(["close", "save"]);
 
 const form = ref({
-  tanggalPengganti: "",
-  jamPengganti: "",
-  kelasPengganti: "",
-  catatan: "",
+  tanggal: "",
+  jam: "",
 });
 
 watch(
   () => props.request,
   () => {
     form.value = {
-      tanggalPengganti: "",
-      jamPengganti: "",
-      kelasPengganti: "",
-      catatan: "",
+      tanggal: "",
+      jam: "",
+      alasan: "",
     };
   },
   { immediate: true },
 );
 
 const submit = () => {
-  emit("approve", {
-    requestId: props.request.id,
-    ...form.value,
-  });
+  if (
+    !form.value.tanggal ||
+    !form.value.jam
+  ) {
+    alert("Tanggal dan jam wajib diisi");
+    return;
+  }
+
+  emit("save", form.value);
 };
 </script>
 
@@ -61,13 +63,6 @@ const submit = () => {
         <input
           v-model="form.jam"
           type="time"
-          class="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 outline-none"
-        />
-
-        <textarea
-          v-model="form.alasan"
-          rows="4"
-          placeholder="Catatan untuk siswa..."
           class="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 outline-none"
         />
 

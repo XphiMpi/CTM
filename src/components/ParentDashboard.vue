@@ -21,18 +21,41 @@ const closeValidation = () => {
   selectedPhoto.value = "";
   selectedAttendance.value = null;
 };
+
+const showAddChildModal = ref(false);
+const studentId = ref("");
+
+const emit = defineEmits(["add-child", "save-child"]);
+
+const linkChild = () => {
+  emit("save-child", studentId.value);
+
+  showAddChildModal.value = false;
+  studentId.value = "";
+};
 </script>
 
 <template>
   <div class="space-y-6">
     <!-- Anak -->
     <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
-      <div class="bg-linear-to-r from-[#0C37D3] to-[#108EDC] text-white p-5">
-        <h2 class="text-xl font-bold">Data Anak</h2>
+      <div
+        class="bg-linear-to-r from-[#0C37D3] to-[#108EDC] text-white p-5 flex items-center justify-between"
+      >
+        <div>
+          <h2 class="text-xl font-bold">Data Anak</h2>
 
-        <p class="text-blue-100 text-sm">
-          Informasi siswa yang terhubung dengan akun orang tua
-        </p>
+          <p class="text-blue-100 text-sm">
+            Informasi siswa yang terhubung dengan akun orang tua
+          </p>
+        </div>
+
+        <button
+          @click="showAddChildModal = true"
+          class="bg-white text-blue-700 px-4 py-2 rounded-lg font-semibold text-sm hover:bg-blue-50"
+        >
+          + Tambah Anak
+        </button>
       </div>
 
       <div class="p-6">
@@ -123,7 +146,15 @@ const closeValidation = () => {
           class="flex items-center justify-between p-5 hover:bg-gray-50 transition"
         >
           <div>
-            <p class="font-medium text-gray-800">
+            <p class="font-semibold text-gray-800">
+              {{ item.studentName || item.nama }}
+            </p>
+
+            <p class="text-sm text-gray-500">
+              {{ item.studentId }}
+            </p>
+
+            <p class="text-sm text-gray-500">
               {{ item.tanggal }}
             </p>
           </div>
@@ -250,6 +281,36 @@ const closeValidation = () => {
               </span>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+    <div
+      v-if="showAddChildModal"
+      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+    >
+      <div class="bg-white rounded-2xl p-6 w-full max-w-md">
+        <h3 class="text-lg font-bold mb-4">Hubungkan Anak</h3>
+
+        <input
+          v-model="studentId"
+          placeholder="Masukkan Student ID"
+          class="w-full border rounded-lg p-3"
+        />
+
+        <div class="flex justify-end gap-2 mt-4">
+          <button
+            @click="showAddChildModal = false"
+            class="px-4 py-2 border rounded-lg"
+          >
+            Batal
+          </button>
+
+          <button
+            @click="linkChild"
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg"
+          >
+            Simpan
+          </button>
         </div>
       </div>
     </div>

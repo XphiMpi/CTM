@@ -89,7 +89,7 @@ const submit = async () => {
   if (type === "parent") {
     const q = query(
       collection(db, "students"),
-      where("studentId", "==", studentId.value)
+      where("studentId", "==", studentId.value),
     );
 
     const snapshot = await getDocs(q);
@@ -108,60 +108,38 @@ const submit = async () => {
     const userCred = await createUserWithEmailAndPassword(
       auth,
       email.value,
-      pass.value
+      pass.value,
     );
 
     await sendEmailVerification(userCred.user);
 
-    const finalRole =
-      type === "teacher"
-        ? role.value
-        : type;
+    const finalRole = type === "teacher" ? role.value : type;
 
     const ctmId = await generateCTMId();
 
-    await setDoc(
-      doc(db, "users", userCred.user.uid),
-      {
-        uid: userCred.user.uid,
-        ctmId,
+    await setDoc(doc(db, "users", userCred.user.uid), {
+      uid: userCred.user.uid,
+      ctmId,
 
-        nama: nama.value,
-        phone: phone.value,
-        email: email.value,
+      nama: nama.value,
+      phone: phone.value,
+      email: email.value,
 
-        role: finalRole,
-        type,
+      role: finalRole,
+      type,
 
-        status: "active",
+      status: "active",
 
-        teacherId:
-          type === "teacher"
-            ? teacherId.value
-            : null,
+      teacherId: type === "teacher" ? teacherId.value : null,
 
-        studentId:
-          type === "parent"
-            ? studentData.studentId
-            : null,
+      studentIds: type === "parent" ? [studentData.studentId] : [],
 
-        studentName:
-          type === "parent"
-            ? studentData.nama
-            : null,
-
-        studentClass:
-          type === "parent"
-            ? studentData.kelas
-            : null,
-
-        emailVerified: false,
-        createdAt: serverTimestamp(),
-      }
-    );
+      emailVerified: false,
+      createdAt: serverTimestamp(),
+    });
 
     alert(
-      `Registrasi berhasil!\nID kamu: ${ctmId}\nCek email untuk verifikasi.`
+      `Registrasi berhasil!\nID kamu: ${ctmId}\nCek email untuk verifikasi.`,
     );
 
     router.push(`/login/${type}`);
