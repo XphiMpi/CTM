@@ -1,0 +1,13 @@
+{
+  "hosting": {
+    "site": "ctm-course-teacher-management",
+    "public": "dist",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

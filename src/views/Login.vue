@@ -44,7 +44,6 @@ const login = async () => {
       return;
     }
 
-    alert("Login berhasil");
     router.push("/dashboard");
   } catch (error) {
     alert("Email atau Password salah");

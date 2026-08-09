@@ -598,10 +598,7 @@ const saveAttendanceBatch =
         materi:
           selectedMateri.value.trim(),
       });
-
-      alert(
-        "Data absensi berhasil disimpan!"
-      );
+      
     } catch (error) {
       console.error(
         "Gagal menyimpan absensi:",
