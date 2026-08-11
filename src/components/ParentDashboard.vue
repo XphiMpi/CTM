@@ -1,10 +1,31 @@
+```vue
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 
-defineProps({
-  attendance: Array,
-  children: Array,
+const props = defineProps({
+  attendance: {
+    type: Array,
+    default: () => [],
+  },
+
+  children: {
+    type: Array,
+    default: () => [],
+  },
+
+  // Data user yang sedang login
+  user: {
+    type: Object,
+    default: () => ({}),
+  },
 });
+
+const emit = defineEmits(["add-child", "save-child"]);
+
+
+// =====================================================
+// MODAL VALIDASI FOTO
+// =====================================================
 
 const showPhotoModal = ref(false);
 const selectedPhoto = ref("");
@@ -22,33 +43,93 @@ const closeValidation = () => {
   selectedAttendance.value = null;
 };
 
+
+// =====================================================
+// MODAL TAMBAH ANAK
+// =====================================================
+
 const showAddChildModal = ref(false);
 const studentId = ref("");
 
-const emit = defineEmits(["add-child", "save-child"]);
-
 const linkChild = () => {
-  emit("save-child", studentId.value);
+  if (!studentId.value.trim()) return;
+
+  emit("save-child", studentId.value.trim());
 
   showAddChildModal.value = false;
   studentId.value = "";
 };
+
+
+const getChildAttendance = (child) => {
+  return props.attendance.filter((item) => {
+    const childId = child.studentId || child.id;
+
+    return (
+      item.studentId === childId ||
+      item.studentId === String(childId) ||
+      item.childId === childId ||
+      item.childId === String(childId)
+    );
+  });
+};
+
+const getHadirCount = (child) => {
+  return getChildAttendance(child).filter(
+    (item) => item.status === "Hadir"
+  ).length;
+};
+
+const getTidakHadirCount = (child) => {
+  return getChildAttendance(child).filter(
+    (item) => item.status !== "Hadir"
+  ).length;
+};
+
+
+const getStudentName = (item) => {
+  if (item.studentName) {
+    return item.studentName;
+  }
+
+  if (item.nama) {
+    return item.nama;
+  }
+
+  const child = props.children.find(
+    (child) =>
+      child.studentId === item.studentId ||
+      String(child.studentId) === String(item.studentId) ||
+      child.id === item.studentId ||
+      String(child.id) === String(item.studentId)
+  );
+
+  return child?.nama || "Siswa";
+};
 </script>
+
 
 <template>
   <div class="space-y-6">
-    <!-- Anak -->
+
+  
+
     <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+
       <div
         class="bg-linear-to-r from-[#0C37D3] to-[#108EDC] text-white p-5 flex items-center justify-between"
       >
+
         <div>
-          <h2 class="text-xl font-bold">Data Anak</h2>
+          <h2 class="text-xl font-bold">
+            Data Anak
+          </h2>
 
           <p class="text-blue-100 text-sm">
             Informasi siswa yang terhubung dengan akun orang tua
           </p>
         </div>
+
 
         <button
           @click="showAddChildModal = true"
@@ -56,16 +137,22 @@ const linkChild = () => {
         >
           + Tambah Anak
         </button>
+
       </div>
 
+
       <div class="p-6">
+
         <div
           v-for="child in children"
-          :key="child.id"
+          :key="child.id || child.studentId"
           class="border border-gray-100 rounded-xl p-4 mb-3 hover:shadow-md transition"
         >
+
           <div class="flex items-center justify-between">
+
             <div>
+
               <h3 class="font-semibold text-lg text-gray-800">
                 {{ child.nama }}
               </h3>
@@ -73,7 +160,9 @@ const linkChild = () => {
               <p class="text-gray-500 text-sm">
                 {{ child.studentId }}
               </p>
+
             </div>
+
 
             <span
               class="px-3 py-1 rounded-full text-xs font-semibold"
@@ -85,88 +174,201 @@ const linkChild = () => {
             >
               {{ child.status }}
             </span>
+
           </div>
+
 
           <div class="mt-3">
-            <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg text-sm">
+
+            <span
+              class="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg text-sm"
+            >
               {{ child.kelas }}
             </span>
+
           </div>
+
         </div>
 
-        <div v-if="!children?.length" class="text-center py-10 text-gray-400">
+
+        <div
+          v-if="!children?.length"
+          class="text-center py-10 text-gray-400"
+        >
           Tidak ada data siswa
         </div>
+
       </div>
+
     </div>
 
-    <!-- Statistik Kehadiran -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="bg-white rounded-2xl shadow-sm p-5">
-        <p class="text-sm text-gray-500">Total Kehadiran</p>
+    <div
+      v-if="children?.length"
+      class="space-y-5"
+    >
 
-        <h2 class="text-3xl font-bold text-blue-600 mt-2">
-          {{ attendance?.length || 0 }}
-        </h2>
+      <div
+        v-for="child in children"
+        :key="'attendance-' + (child.id || child.studentId)"
+      >
+
+        <!-- Nama Anak -->
+        <div class="mb-3">
+
+          <h2 class="text-lg font-bold text-gray-800">
+            Rekap Kehadiran {{ child.nama }}
+          </h2>
+
+          <p class="text-sm text-gray-500">
+            {{ child.studentId }} • {{ child.kelas }}
+          </p>
+
+        </div>
+
+
+        <!-- Card Hadir & Tidak Hadir -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          <!-- Hadir -->
+          <div
+            class="bg-white rounded-2xl shadow-sm p-5 border-l-4 border-green-500"
+          >
+
+            <div class="flex items-center justify-between">
+
+              <div>
+
+                <p class="text-sm text-gray-500">
+                  Hadir
+                </p>
+
+                <h2 class="text-3xl font-bold text-green-600 mt-2">
+                  {{ getHadirCount(child) }}
+                </h2>
+
+                <p class="text-xs text-gray-400 mt-1">
+                  Total kehadiran
+                </p>
+
+              </div>
+
+
+              <div
+                class="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center text-xl"
+              >
+                ✓
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <!-- Tidak Hadir -->
+          <div
+            class="bg-white rounded-2xl shadow-sm p-5 border-l-4 border-red-500"
+          >
+
+            <div class="flex items-center justify-between">
+
+              <div>
+
+                <p class="text-sm text-gray-500">
+                  Tidak Hadir
+                </p>
+
+                <h2 class="text-3xl font-bold text-red-500 mt-2">
+                  {{ getTidakHadirCount(child) }}
+                </h2>
+
+                <p class="text-xs text-gray-400 mt-1">
+                  Total ketidakhadiran
+                </p>
+
+              </div>
+
+
+              <div
+                class="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center text-xl"
+              >
+                !
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
       </div>
 
-      <div class="bg-white rounded-2xl shadow-sm p-5">
-        <p class="text-sm text-gray-500">Hadir</p>
-
-        <h2 class="text-3xl font-bold text-green-600 mt-2">
-          {{
-            attendance?.filter((item) => item.status === "Hadir").length || 0
-          }}
-        </h2>
-      </div>
-
-      <div class="bg-white rounded-2xl shadow-sm p-5">
-        <p class="text-sm text-gray-500">Tidak Hadir</p>
-
-        <h2 class="text-3xl font-bold text-red-500 mt-2">
-          {{
-            attendance?.filter((item) => item.status !== "Hadir").length || 0
-          }}
-        </h2>
-      </div>
     </div>
 
-    <!-- Riwayat Kehadiran -->
     <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
-      <div class="p-5 border-b border-gray-100">
-        <h2 class="text-xl font-bold text-gray-800">Riwayat Kehadiran</h2>
 
-        <p class="text-sm text-gray-500">Monitoring aktivitas belajar siswa</p>
+      <div class="p-5 border-b border-gray-100">
+
+        <h2 class="text-xl font-bold text-gray-800">
+          Riwayat Kehadiran
+        </h2>
+
+        <p class="text-sm text-gray-500">
+          Monitoring aktivitas belajar seluruh anak
+        </p>
+
       </div>
+
 
       <div class="divide-y">
+
         <div
           v-for="item in attendance"
           :key="item.id"
           class="flex items-center justify-between p-5 hover:bg-gray-50 transition"
         >
+
+          <!-- Informasi -->
           <div>
+
+            <!-- NAMA ANAK -->
             <p class="font-semibold text-gray-800">
-              {{ item.studentName || item.nama }}
+              {{ getStudentName(item) }}
             </p>
 
+            <!-- STUDENT ID -->
             <p class="text-sm text-gray-500">
               {{ item.studentId }}
             </p>
 
+            <!-- KELAS -->
+            <p
+              v-if="item.kelas"
+              class="text-sm text-gray-500"
+            >
+              Kelas: {{ item.kelas }}
+            </p>
+
+            <!-- TANGGAL -->
             <p class="text-sm text-gray-500">
               {{ item.tanggal }}
             </p>
+
           </div>
 
+
+          <!-- STATUS -->
           <div class="flex items-center gap-2">
+
             <button
-              v-if="item.photoUrl"
+              v-if="item.status === 'Hadir' && item.photoUrl"
               @click="openValidation(item)"
               class="px-3 py-1 text-xs font-semibold bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition"
             >
               📷 Cek Validasi
             </button>
+
+
+            <!-- STATUS -->
 
             <span
               class="px-3 py-1 rounded-full text-xs font-semibold"
@@ -178,32 +380,50 @@ const linkChild = () => {
             >
               {{ item.status }}
             </span>
+
           </div>
+
         </div>
 
-        <div v-if="!attendance?.length" class="text-center py-10 text-gray-400">
+
+        <div
+          v-if="!attendance?.length"
+          class="text-center py-10 text-gray-400"
+        >
           Belum ada data kehadiran
         </div>
+
       </div>
+
     </div>
 
-    <!-- Modal Validasi Foto -->
     <div
       v-if="showPhotoModal"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
     >
+
       <div
         class="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl"
       >
+
         <!-- Header -->
+
         <div
           class="bg-linear-to-r from-blue-600 to-cyan-500 text-white px-6 py-4 flex items-center justify-between"
         >
-          <div>
-            <h3 class="text-xl font-bold">Validasi Kehadiran</h3>
 
-            <p class="text-blue-100 text-sm">Bukti foto kehadiran siswa</p>
+          <div>
+
+            <h3 class="text-xl font-bold">
+              Validasi Kehadiran
+            </h3>
+
+            <p class="text-blue-100 text-sm">
+              Bukti foto kehadiran siswa
+            </p>
+
           </div>
+
 
           <button
             @click="closeValidation"
@@ -211,12 +431,18 @@ const linkChild = () => {
           >
             ✕
           </button>
+
         </div>
 
+
         <!-- Content -->
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
+
           <!-- Foto -->
+
           <div>
+
             <img
               v-if="selectedPhoto"
               :src="selectedPhoto"
@@ -230,74 +456,151 @@ const linkChild = () => {
             >
               Foto tidak tersedia
             </div>
+
           </div>
 
+
           <!-- Detail -->
-          <div v-if="selectedAttendance" class="space-y-4">
-            <div class="bg-blue-50 border border-blue-100 rounded-2xl p-4">
-              <p class="text-sm text-gray-500">Tanggal</p>
+
+          <div
+            v-if="selectedAttendance"
+            class="space-y-4"
+          >
+
+            <!-- Nama Anak -->
+
+            <div
+              class="bg-purple-50 border border-purple-100 rounded-2xl p-4"
+            >
+
+              <p class="text-sm text-gray-500">
+                Nama Anak
+              </p>
+
+              <p class="font-semibold text-gray-800">
+                {{ getStudentName(selectedAttendance) }}
+              </p>
+
+            </div>
+
+
+            <!-- Tanggal -->
+
+            <div
+              class="bg-blue-50 border border-blue-100 rounded-2xl p-4"
+            >
+
+              <p class="text-sm text-gray-500">
+                Tanggal
+              </p>
 
               <p class="font-semibold text-gray-800">
                 {{ selectedAttendance.tanggal }}
               </p>
+
             </div>
 
-            <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
-              <p class="text-sm text-gray-500">Kelas</p>
+
+            <!-- Kelas -->
+
+            <div
+              class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4"
+            >
+
+              <p class="text-sm text-gray-500">
+                Kelas
+              </p>
 
               <p class="font-semibold text-gray-800">
                 {{ selectedAttendance.kelas }}
               </p>
+
             </div>
 
-            <div class="bg-cyan-50 border border-cyan-100 rounded-2xl p-4">
-              <p class="text-sm text-gray-500">Mata Pelajaran</p>
+
+            <!-- Mata Pelajaran -->
+
+            <div
+              class="bg-cyan-50 border border-cyan-100 rounded-2xl p-4"
+            >
+
+              <p class="text-sm text-gray-500">
+                Mata Pelajaran
+              </p>
 
               <p class="font-semibold text-gray-800">
                 {{ selectedAttendance.mapel }}
               </p>
+
             </div>
 
-            <div class="bg-green-50 border border-green-100 rounded-2xl p-4">
-              <p class="text-sm text-gray-500">Wajah Terdeteksi</p>
+
+            <!-- Wajah Terdeteksi -->
+
+            <div
+              class="bg-green-50 border border-green-100 rounded-2xl p-4"
+            >
+
+              <p class="text-sm text-gray-500">
+                Wajah Terdeteksi
+              </p>
 
               <p class="text-3xl font-bold text-green-600">
                 {{ selectedAttendance.detectedFaces }}
               </p>
+
             </div>
 
-            <div class="bg-yellow-50 border border-yellow-100 rounded-2xl p-4">
-              <p class="text-sm text-gray-500">Status Kehadiran</p>
+
+            <!-- Status -->
+
+            <div
+              class="bg-yellow-50 border border-yellow-100 rounded-2xl p-4"
+            >
+
+              <p class="text-sm text-gray-500">
+                Status Kehadiran
+              </p>
 
               <span
-                class="inline-flex px-3 py-1 rounded-full text-sm font-semibold"
-                :class="
-                  selectedAttendance.status === 'Hadir'
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-red-100 text-red-700'
-                "
+                class="inline-flex px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-700"
               >
                 {{ selectedAttendance.status }}
               </span>
+
             </div>
+
           </div>
+
         </div>
+
       </div>
+
     </div>
+
     <div
       v-if="showAddChildModal"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
     >
-      <div class="bg-white rounded-2xl p-6 w-full max-w-md">
-        <h3 class="text-lg font-bold mb-4">Hubungkan Anak</h3>
+
+      <div
+        class="bg-white rounded-2xl p-6 w-full max-w-md"
+      >
+
+        <h3 class="text-lg font-bold mb-4">
+          Hubungkan Anak
+        </h3>
+
 
         <input
           v-model="studentId"
           placeholder="Masukkan Student ID"
-          class="w-full border rounded-lg p-3"
+          class="w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
 
+
         <div class="flex justify-end gap-2 mt-4">
+
           <button
             @click="showAddChildModal = false"
             class="px-4 py-2 border rounded-lg"
@@ -305,14 +608,20 @@ const linkChild = () => {
             Batal
           </button>
 
+
           <button
             @click="linkChild"
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg"
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Simpan
           </button>
+
         </div>
+
       </div>
+
     </div>
+
   </div>
 </template>
+
